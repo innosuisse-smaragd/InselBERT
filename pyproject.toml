@@ -1,8 +1,8 @@
 
 [project]
-name = ""
-version = ""
-description = ""
+name = "llm-model"
+version = "0.1"
+description = "LLM-based, two-layer clinical fact extraction based on the approach by Steinkamp et al."
 authors = [
     {name = "Daniel Reichenpfader", email = "daniel.reichenpfader@bfh.ch"},
 ]
@@ -16,4 +16,14 @@ requires-python = ">=3.11"
 [tool.pdm.dev-dependencies]
 dev = [
     "jupyter>=1.0.0",
+    "isort>=5.12.0",
+    "pycodestyle>=2.10.0",
 ]
+
+[tool.pdm.scripts] # See: https://pdm.fming.dev/2.7/usage/scripts/
+lint = {cmd = "pycodestyle ./src ./test --max-line-length 120"}
+# test = {cmd = "pytest"}
+check-import-order = {cmd = "isort ./src ./test --check-only"}
+fix-import-order = {cmd = "isort ./src ./test"}
+build-bento = {cmd = "bentoml build ./src/refinement_model/inference -f ./src/refinement-model/inference/bentofile.yaml"}
+run-bento-dev = {cmd = "bentoml serve service:svc --reload --working-dir ./src/refinement-model/inference"}
