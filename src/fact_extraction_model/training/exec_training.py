@@ -3,7 +3,8 @@
 from fact_extraction_model.data.convert_IOB_to_dataset import (
     convert_iob2_to_dataset,
 )
-import fact_extraction_model.model.bert_fact_extraction as model
+import fact_extraction_model.model.bert_fact_extraction as model_custom
+import fact_extraction_model.model.bert_token_classification as model_hf
 from datasets import Dataset, DatasetDict
 from transformers import (
     BertConfig,
@@ -129,9 +130,11 @@ test_dl = DataLoader(
 # Model instantiation
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 config = BertConfig.from_pretrained(BASE_MODEL)
-model = model.BertForFactExtraction.from_pretrained(
-    BASE_MODEL, config=config, num_labels=NUM_LABELS
+
+model = model_hf.BertForTokenClassification.from_pretrained(
+    BASE_MODEL, num_labels=NUM_LABELS, label2id=label2id, id2label=id2label
 )
+
 
 # Resize embedding size if additional tokens are added (only for RE)
 # model.bert.resize_token_embeddings(len(tokenizer.vocab))
@@ -246,6 +249,7 @@ for epoch in range(NUM_EPOCHS):
     )
     save_checkpoint(model, OUTPUT_DIR, epoch + 1)
     save_training_history(history, OUTPUT_DIR, epoch + 1)
+
 
 # Evaluation
 
