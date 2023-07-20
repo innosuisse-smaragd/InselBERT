@@ -24,8 +24,8 @@ import pandas as pd
 # Constants
 
 FILE = "../../../data/iob2data.txt"
-BASE_MODEL = "../../serialized-models/medbert-insel"
-OUTPUT_DIR = "../../serialized-models/medbert-insel-facts"
+BASE_MODEL = "../../../serialized_models/medbert_512/"
+OUTPUT_DIR = "../../../serialized_models/medbert_insel_facts"
 BATCH_SIZE = 24
 LEARNING_RATE = 5e-5
 WEIGHT_DECAY = 1e-2
@@ -60,7 +60,6 @@ hf_dataset = DatasetDict(
         "validation": hf_dev_test["train"],
     }
 )
-
 
 # Data preprocessing
 
@@ -266,7 +265,7 @@ def make_loss_diagram():
     plt.legend(loc="best")
 
     plt.tight_layout()
-    plt.saveFig(OUTPUT_DIR + "/loss.png", dpi=300)
+    plt.savefig(OUTPUT_DIR + "/loss.png", dpi=300)
 
 
 make_loss_diagram()
@@ -290,8 +289,9 @@ for batch in test_dl:
         test_labels_list.append(labels)
         test_preds_list.append(preds)
 
-with open(OUTPUT_DIR + "/classification_report.txt", "w") as f:
-    print(classification_report(test_labels_list, test_preds_list, file=f))
+report = classification_report(test_labels_list, test_preds_list, output_dict=True)
+df = pd.DataFrame(report).transpose()
+df.to_json(path_or_buf=OUTPUT_DIR + "/classification_report.json")
 
 # Inference
 
