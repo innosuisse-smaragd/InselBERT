@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from dataset_entry import Dataset_Entry
+from shared.dataset_entry import Dataset_Entry
 
 from smaragd_shared_python.annotation.document import Document
 from smaragd_shared_python.annotation.document_parser import DocumentParser
@@ -34,52 +34,34 @@ class CASLoader:
             token_texts = []
 
             annotation_classes = ["FACT", "ANCHOR_ENTITY", "MODIFIER"]
-
-            prev_fact_annotation = None
-            prev_anchor_annotation = None
-            prev_modifier_annotation = None
+            prev_annotation = None
             for token in tokens:
-                fact_annotation_tags = []
-                fact_annotations = doc.get_annotation_for_token(token, "FACT")
+                for annoclass in annotation_classes:
+                    annotation_tags = []
+                    annotations = doc.get_annotation_for_token(token, annoclass)
 
-                for annotation in fact_annotations:
-                    fact_value = annotation.fact_value
-                    if prev_fact_annotation != fact_value:
-                        fact_annotation_tags.append("B-" + fact_value)
-                    else:
-                        fact_annotation_tags.append("I-" + fact_value)
-                    print("Value: ", fact_value)
-                    print("Prev", prev_fact_annotation)
-                    prev_fact_annotation = fact_value
+                    for annotation in annotations:
+                        if annoclass == "FACT":
+                            value = annotation.fact_value
+                        elif annoclass == "ANCHOR_ENTITY":
+                            value = annotation.anchor_entity_value
+                        elif annoclass == "MODIFIER":
+                            value = annotation.modifier_value
 
-                anchor_annotation_tags = []
-                anchor_annotations = doc.get_annotation_for_token(
-                    token, "ANCHOR_ENTITY"
-                )
-
-                for annotation in anchor_annotations:
-                    anchor_entity_value = annotation.anchor_entity_value
-                    if prev_anchor_annotation != anchor_entity_value:
-                        anchor_annotation_tags.append("B-" + anchor_entity_value)
-                    else:
-                        anchor_annotation_tags.append("I-" + anchor_entity_value)
-                    prev_anchor_annotation = anchor_entity_value
-
-                modifier_annotation_tags = []
-                modifier_annotations = doc.get_annotation_for_token(token, "MODIFIER")
-
-                for annotation in modifier_annotations:
-                    modifier_value = annotation.modifier_value
-                    if prev_modifier_annotation != modifier_value:
-                        modifier_annotation_tags.append("B-" + modifier_value)
-                    else:
-                        modifier_annotation_tags.append("I-" + modifier_value)
-                    prev_modifier_annotation = modifier_value
+                        if prev_annotation != value:
+                            annotation_tags.append("B-" + value)
+                        else:
+                            annotation_tags.append("I-" + value)
+                        prev_annotation = value
+                    if annoclass == "FACT":
+                        fact_tags.append(annotation_tags)
+                    elif annoclass == "ANCHOR_ENTITY":
+                        anchor_tags.append(annotation_tags)
+                    elif annoclass == "MODIFIER":
+                        modifier_tags.append(annotation_tags)
                 text = doc.get_covered_text(token)
                 token_texts.append(text)
-                fact_tags.append(fact_annotation_tags)
-                anchor_tags.append(anchor_annotation_tags)
-                modifier_tags.append(modifier_annotation_tags)
+
             entry = Dataset_Entry(
                 doc.document_meta_data.document_id,
                 fact_tags,
@@ -90,10 +72,42 @@ class CASLoader:
             dictlist.append(entry)
         return dictlist
 
-
-loader = CASLoader(ANNOTATED_REPORTS_PATH)
-dictlist = loader.load_cas_and_convert_to_dict_list()
-print(str(dictlist[1].tokens))
-print(str(dictlist[1].fact_tags))
-print(str(dictlist[1].anchor_tags))
-print(str(dictlist[1].modifier_tags))
+    def load_CAS_convert_to_offset_dict(self) -> list[dict]:
+        documents = self.load_cas_from_directory()
+        dictlist = []
+        for doc in documents:
+            modifier_annotations = []
+            fact_annotations = []
+            anchor_annotations = []
+            modifier_tags = doc.get_modifier_annotations()
+            for modifier in modifier_tags:
+                obj = {
+                    "start": modifier.begin,
+                    "end": modifier.end,
+                    "tag": modifier.get_value(),
+                }
+                modifier_annotations.append(obj)
+            anchor_tags = doc.get_anchor_entity_annotations()
+            for anchor in anchor_tags:
+                obj = {
+                    "start": anchor.begin,
+                    "end": anchor.end,
+                    "tag": anchor.get_value(),
+                }
+                anchor_annotations.append(obj)
+            for fact in doc.facts:
+                obj = {
+                    "start": fact.begin,
+                    "end": fact.end,
+                    "tag": fact.get_value(),
+                }
+                fact_annotations.append(obj)
+            entry = {
+                "id": doc.document_meta_data.document_id,
+                "fact_tags": fact_annotations,
+                "anchor_tags": anchor_annotations,
+                "modifier_tags": modifier_annotations,
+                "text": doc.document_text,
+            }
+            dictlist.append(entry)
+        return dictlist
