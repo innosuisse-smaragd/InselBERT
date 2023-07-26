@@ -1,47 +1,17 @@
 # Source: https://github.com/huggingface/transformers/blob/main/src/transformers/models/bert/modeling_bert.py
 
 
-from typing import Optional, Tuple, Union, FloatTensor
-import logging
+from typing import Optional, Tuple, Union
 import torch
 import torch.utils.checkpoint
 from torch import nn
-from transformers import BertModel, BertPreTrainedModel, Trainer
+from transformers import BertModel, BertPreTrainedModel
 from transformers.modeling_outputs import (
     TokenClassifierOutput,
 )
 
 
-class MultiLabelTrainer(Trainer):
-    def __init__(self, *args, class_weights: Optional[FloatTensor] = None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if class_weights is not None:
-            class_weights = class_weights.to(self.args.device)
-            logging.info(
-                "Using multi-label classification with class weights", class_weights
-            )
-        self.loss_fct = nn.BCEWithLogitsLoss(weight=class_weights)
-
-    def compute_loss(self, model, inputs, return_outputs=False):
-        """
-        How the loss is computed by Trainer. By default, all models return the loss in the first element.
-        Subclass and override for custom behavior.
-        """
-        labels = inputs.pop("labels")
-        outputs = model(**inputs)
-        try:
-            loss = self.loss_fct(
-                outputs.logits.view(-1, model.num_labels), labels.view(-1)
-            )
-        except AttributeError:  # DataParallel
-            loss = self.loss_fct(
-                outputs.logits.view(-1, model.module.num_labels), labels.view(-1)
-            )
-
-        return (loss, outputs) if return_outputs else loss
-
-
-class BertForTokenClassification(BertPreTrainedModel):
+class BertForMultiLabelClassification(BertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -69,6 +39,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         labels: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
+        offset_mapping: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput]:
         return_dict = (
