@@ -2,7 +2,6 @@ from datasets import Dataset
 from transformers import (
     AutoTokenizer,
     DataCollatorWithPadding,
-    DataCollatorForTokenClassification,
     BertConfig,
     get_scheduler,
 )
@@ -15,27 +14,23 @@ from torch.utils.data import DataLoader
 from torch.optim import AdamW
 import matplotlib.pyplot as plt
 import os
+from fact_extraction_model.shared import BASE_MODEL, OUTPUT_DIR
 
 # Imports
 
 
 import torch
-from seqeval.metrics import classification_report, f1_score
+from seqeval.metrics import f1_score
 import shutil
-import pandas as pd
 
 
-FILE = "../../../data/iob2data.txt"
-BASE_MODEL = "../../../serialized_models/medbert_512/"
-OUTPUT_DIR = "../../../serialized_models/medbert_insel_facts"
 BATCH_SIZE = 24
 LEARNING_RATE = 5e-5
 WEIGHT_DECAY = 1e-2
 NUM_EPOCHS = 5  # 100
 MAX_LENGTH = 512
-BASE_MODEL = "./serialized_models/medbert_512/"
 
-OUTPUT_DIR = "./serialized_models/medbert_pretrained_model01/"
+torch.manual_seed(0)
 
 # TODO: Use method from shared-python and create three dicts for anchors, facts and modifiers
 tag2id = {"PER": 1, "ORG": 2, "LOC": 3, "MISC": 4, "NCHUNK": 5, "TIME": 6, "PLACE": 7}
@@ -50,14 +45,14 @@ label2id = {
 
 id2label = {v: k for k, v in label2id.items()}
 NUM_LABELS = len(id2label)
-print(id2label)
+# print(id2label)
 
 # if not done separately, applying the tokenization function via df.map() fails
 train_ds = Dataset.from_json("./data/multilabel.train.jsonlines")
 val_ds = Dataset.from_json("./data/multilabel.validation.jsonlines")
 test_ds = Dataset.from_json("./data/multilabel.test.jsonlines")
 
-print(train_ds[0])
+# print(train_ds[0])
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 
@@ -155,7 +150,18 @@ def tokenize_and_adjust_labels(sample):  # TODO: Handle subword tokens -> -100
             token_labels[0] = 0
         previous_word_id = word_id
 
-    return {**tokenized, "labels_facts": labels_facts, "labels_anchors": labels_anchors}
+        # token_labels[0] = token_labels[0].item()
+    labels_anchors_ = []
+    for arr in labels_anchors:
+        test = np.asarray(arr)
+        labels_anchors_.append(test.item())
+    # labels_anchors_ = float(np.asarray(labels_anchors))
+
+    return {
+        **tokenized,
+        "labels_facts": labels_facts,
+        "labels_anchors": labels_anchors_,
+    }
 
 
 # if not done separately, applying the tokenization function via df.map() fails
@@ -168,6 +174,8 @@ tokenized_val_ds = val_ds.map(
 tokenized_test_ds = test_ds.map(
     tokenize_and_adjust_labels, remove_columns=val_ds.column_names
 )
+
+# print(tokenized_train_ds[0])
 
 # data_collator = DataCollatorWithPadding(tokenizer, padding=True)
 data_collator = DataCollatorWithPadding(
@@ -198,13 +206,13 @@ test_dl = DataLoader(
 
 # Model instantiation
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-config = BertConfig.from_pretrained(BASE_MODEL)
+config = BertConfig.from_pretrained(BASE_MODEL)  # TODO: Adapt?
 
 model = model_combined.BertForFactAndAnchorClassification.from_pretrained(
     BASE_MODEL,
     num_labels=NUM_LABELS,
     label2id=label2id,
-    id2label=id2label,  # TODO: add other mappings
+    id2label=id2label,  # TODO: add other mappings- but how?
 )
 
 model = model.to(device)
@@ -309,14 +317,17 @@ def do_eval(model, eval_dl):
         with torch.no_grad():
             outputs = model(**batch)
 
-        loss = outputs["loss"].loss  # TODO: change
+        loss_averaged = outputs["loss"].loss  # TODO: Check calculation
 
-        eval_loss += loss.detach().cpu().numpy()
+        eval_loss += loss_averaged.detach().cpu().numpy()
         # eval_score += compute_f1_score(batch["labels"], outputs.logits)
-        metrics_multilabel = compute_metrics(
+        metrics_facts = compute_metrics(
             [outputs["facts"].logits.cpu(), batch["labels_facts"].cpu()]
-        )  # TODO: apply both methods
-        eval_score += metrics_multilabel["macro_f1"]
+        )
+        metrics_anchors = compute_f1_score(
+            batch["labels_anchors"].cpu(), outputs["anchors"].logits.cpu()
+        )
+        eval_score += (metrics_facts["macro_f1"] + metrics_anchors) / 2
         num_batches += 1
 
     eval_score /= num_batches

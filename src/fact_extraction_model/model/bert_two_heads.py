@@ -46,10 +46,6 @@ class BertForFactAndAnchorClassification(BertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput]:
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
-
         outputs = self.bert(
             input_ids,
             attention_mask=attention_mask,
@@ -71,7 +67,6 @@ class BertForFactAndAnchorClassification(BertPreTrainedModel):
         sequence_output_anchors = self.dropout_anchors(sequence_output)
         logits_anchors = self.classifier_anchors(sequence_output_anchors)
 
-        loss_averaged = None
         loss_facts = None
         if labels_facts is not None:
             loss_fct_facts = nn.BCEWithLogitsLoss()  # Binary Cross Entropy loss
@@ -84,7 +79,8 @@ class BertForFactAndAnchorClassification(BertPreTrainedModel):
                 logits_anchors.view(-1, self.num_labels), labels_anchors.view(-1)
             )
 
-        if loss_facts or loss_anchors:
+        loss_averaged = None
+        if loss_facts or loss_anchors:  # TODO: Improve?
             loss_averaged = (loss_facts + loss_anchors) / 2
 
         averaged_output = TokenClassifierOutput(loss=loss_averaged)

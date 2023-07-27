@@ -250,9 +250,6 @@ for epoch in range(NUM_EPOCHS):
     save_training_history(history, OUTPUT_DIR, epoch + 1)
 
 
-# Evaluation
-
-
 def make_loss_diagram():
     plt.subplot(2, 1, 1)
     plt.plot([train_loss for _, train_loss, _, _ in history], label="train")
@@ -272,81 +269,3 @@ def make_loss_diagram():
 
 
 make_loss_diagram()
-
-
-def get_label_and_predicted_tags(batch):
-    batch = {k: v.to(device) for k, v in batch.items()}
-    with torch.no_grad():
-        outputs = model(**batch)
-    preds_cpu = torch.argmax(outputs.logits, dim=-1).cpu().numpy()
-    labels_cpu = batch["labels"].cpu().numpy()
-    labels_list, preds_list = align_predictions(labels_cpu, preds_cpu)
-    return labels_list, preds_list
-
-
-id2label[-100] = "IGN"
-test_labels_list, test_preds_list = [], []
-for batch in test_dl:
-    labels_list, preds_list = get_label_and_predicted_tags(batch)
-    for labels, preds in zip(labels_list, preds_list):
-        test_labels_list.append(labels)
-        test_preds_list.append(preds)
-
-report = classification_report(test_labels_list, test_preds_list, output_dict=True)
-df = pd.DataFrame(report).transpose()
-df.to_json(path_or_buf=OUTPUT_DIR + "/classification_report.json")
-
-# Inference
-
-
-def align_tokens_and_predicted_labels(toks_cpu, preds_cpu):
-    aligned_toks, aligned_preds = [], []
-    prev_tok = None
-    for tok, pred in zip(toks_cpu, preds_cpu):
-        if tok.startswith("##") and prev_tok is not None:
-            prev_tok += tok[2:]
-        else:
-            if prev_tok is not None:
-                aligned_toks.append(prev_tok)
-                aligned_preds.append(id2label[prev_pred])
-            prev_tok = tok
-            prev_pred = pred
-    if prev_tok is not None:
-        aligned_toks.append(prev_tok)
-        aligned_preds.append(id2label[prev_pred])
-    return aligned_toks, aligned_preds
-
-
-def predict(texts):
-    aligned_tok_list, aligned_pred_list = [], []
-    for text in texts:
-        inputs = tokenizer(text, return_tensors="pt").to(device)
-        outputs = model(**inputs)
-        tokens_cpu = tokenizer.convert_ids_to_tokens(inputs.input_ids.view(-1))
-        preds_cpu = torch.argmax(outputs.logits, dim=-1)[0].cpu().numpy()
-
-        aligned_toks, aligned_preds = align_tokens_and_predicted_labels(
-            tokens_cpu, preds_cpu
-        )
-
-        aligned_tok_list.append(aligned_toks)
-        aligned_pred_list.append(aligned_preds)
-
-    return aligned_tok_list, aligned_pred_list
-
-
-predicted_tokens, predicted_tags = predict(
-    [
-        ["Sie klagte über anhaltende Müdigkeit, Gewichtszunahme und trockene Haut ."],
-        [
-            "In ihrer Krankengeschichte ist bekannt, dass sie an einer Schilddrüsenunterfunktion leidet und bereits mit Levothyroxin behandelt wird ."
-        ],
-    ]
-)
-
-pd.DataFrame(
-    [predicted_tokens[0], predicted_tags[0]], index=["tokens", "predicted_tags"]
-)
-pd.DataFrame(
-    [predicted_tokens[1], predicted_tags[1]], index=["tokens", "predicted_tags"]
-)
