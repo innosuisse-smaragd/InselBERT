@@ -39,7 +39,9 @@ class BertForMultiLabelClassification(BertPreTrainedModel):
         labels: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        offset_mapping: Optional[bool] = None,
+        offset_mapping: Optional[
+            bool
+        ] = None,  # https://github.com/huggingface/transformers/issues/11095
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput]:
         return_dict = (
