@@ -18,7 +18,7 @@ import os
 
 BASE_MODEL = "./serialized_models/medbert_512/"
 
-MAX_LENGTH = 256
+MAX_LENGTH = 512
 
 BATCH_SIZE = 24
 LEARNING_RATE = 5e-5

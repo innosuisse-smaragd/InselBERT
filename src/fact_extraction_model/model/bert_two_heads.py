@@ -39,6 +39,9 @@ class BertForFactAndAnchorClassification(BertPreTrainedModel):
         # Split into two label tensors
         labels_anchors: Optional[torch.Tensor] = None,
         labels_facts: Optional[torch.Tensor] = None,
+        offset_mapping: Optional[
+            bool
+        ] = None,  # https://github.com/huggingface/transformers/issues/11095
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
@@ -84,6 +87,8 @@ class BertForFactAndAnchorClassification(BertPreTrainedModel):
         if loss_facts or loss_anchors:
             loss_averaged = (loss_facts + loss_anchors) / 2
 
+        averaged_output = TokenClassifierOutput(loss=loss_averaged)
+
         facts_output = TokenClassifierOutput(
             loss=loss_facts,
             logits=logits_facts,
@@ -99,7 +104,7 @@ class BertForFactAndAnchorClassification(BertPreTrainedModel):
         )
 
         return_dict = {
-            "loss": loss_averaged,
+            "loss": averaged_output,
             "anchors": anchors_output,
             "facts": facts_output,
         }
