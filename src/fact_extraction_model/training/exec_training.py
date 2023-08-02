@@ -23,12 +23,27 @@ import torch
 from seqeval.metrics import f1_score
 import shutil
 
+import wandb
+
 
 BATCH_SIZE = 24
 LEARNING_RATE = 5e-5
 WEIGHT_DECAY = 1e-2
-NUM_EPOCHS = 5  # 100
+NUM_EPOCHS = 100  # 100
 MAX_LENGTH = 512
+
+run = wandb.init(
+    # Set the project where this run will be logged
+    project="smaragd-llm-01",
+    # Track hyperparameters and run metadata
+    config={
+        "batch_size": BATCH_SIZE,
+        "learning_rate": LEARNING_RATE,
+        "weight_decay": WEIGHT_DECAY,
+        "epochs": NUM_EPOCHS,
+        "max_input_length": MAX_LENGTH,
+    },
+)
 
 torch.manual_seed(0)
 
@@ -217,6 +232,8 @@ model = model_combined.BertForFactAndAnchorClassification.from_pretrained(
 
 model = model.to(device)
 
+wandb.watch(model, log_freq=100)
+
 optimizer = AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
 num_training_steps = NUM_EPOCHS * len(train_dl)
@@ -362,6 +379,9 @@ for epoch in range(NUM_EPOCHS):
             epoch + 1, train_loss, eval_loss, eval_score
         )
     )
+    wandb.log(
+        {"train_loss": train_loss, "validation_loss": eval_loss, "f1-score": eval_score}
+    )
     save_checkpoint(model, OUTPUT_DIR, epoch + 1)
     save_training_history(history, OUTPUT_DIR, epoch + 1)
 
@@ -385,3 +405,5 @@ def make_loss_diagram():
 
 
 make_loss_diagram()
+
+wandb.finish()
