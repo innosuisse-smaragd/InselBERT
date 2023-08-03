@@ -14,7 +14,10 @@ from torch.utils.data import DataLoader
 from torch.optim import AdamW
 import matplotlib.pyplot as plt
 import os
-from fact_extraction_model.shared import BASE_MODEL, OUTPUT_DIR
+
+
+import constants
+from datetime import datetime
 
 # Imports
 
@@ -69,7 +72,7 @@ test_ds = Dataset.from_json("./data/test/test.jsonlines")
 
 # print(train_ds[0])
 
-tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_PATH)
 
 
 def get_token_role_in_span(
@@ -221,10 +224,10 @@ test_dl = DataLoader(
 
 # Model instantiation
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-config = BertConfig.from_pretrained(BASE_MODEL)  # TODO: Adapt?
+config = BertConfig.from_pretrained(constants.BASE_MODEL_PATH)  # TODO: Adapt?
 
 model = model_combined.BertForFactAndAnchorClassification.from_pretrained(
-    BASE_MODEL,
+    constants.BASE_MODEL_PATH,
     num_labels=NUM_LABELS,
     label2id=label2id,
     id2label=id2label,  # TODO: add other mappings- but how?
@@ -353,11 +356,16 @@ def do_eval(model, eval_dl):
 
 
 def save_checkpoint(model, model_dir, epoch):
-    model.save_pretrained(os.path.join(OUTPUT_DIR, "ckpt-{:d}".format(epoch)))
+    now = datetime.now()
+    dt_string = now.strftime("%d%m%Y_%H:%M:%S")
+    path = "medbert_512_finetuned_01_" + dt_string
+    model.save_pretrained(
+        os.path.join(constants.FINETUNED_MODEL_01_PATH, path),
+    )
 
 
 def save_training_history(history, model_dir, epoch):
-    fhist = open(os.path.join(OUTPUT_DIR, "history.tsv"), "w")
+    fhist = open(os.path.join(constants.FINETUNED_MODEL_01_PATH, "history.tsv"), "w")
     for epoch, train_loss, eval_loss, eval_score in history:
         fhist.write(
             "{:d}\t{:.5f}\t{:.5f}\t{:.5f}\n".format(
@@ -369,7 +377,7 @@ def save_training_history(history, model_dir, epoch):
 
 history = []
 
-
+best_eval_loss = 100
 for epoch in range(NUM_EPOCHS):
     train_loss = do_train(model, train_dl)
     eval_loss, eval_score = do_eval(model, valid_dl)
@@ -382,8 +390,11 @@ for epoch in range(NUM_EPOCHS):
     wandb.log(
         {"train_loss": train_loss, "validation_loss": eval_loss, "f1-score": eval_score}
     )
-    save_checkpoint(model, OUTPUT_DIR, epoch + 1)
-    save_training_history(history, OUTPUT_DIR, epoch + 1)
+    save_training_history(history, constants.FINETUNED_MODEL_01_PATH, epoch + 1)
+    if eval_loss < best_eval_loss:
+        best_eval_loss = eval_loss
+        save_checkpoint(model, constants.FINETUNED_MODEL_01_PATH, epoch + 1)
+        print("Model saved as current eval_loss is: ", best_eval_loss)
 
 
 def make_loss_diagram():
@@ -401,7 +412,7 @@ def make_loss_diagram():
     plt.legend(loc="best")
 
     plt.tight_layout()
-    plt.savefig(OUTPUT_DIR + "/loss.png", dpi=300)
+    plt.savefig(constants.FINETUNED_MODEL_01_PATH + "/loss.png", dpi=300)
 
 
 make_loss_diagram()

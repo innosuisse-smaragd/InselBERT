@@ -9,15 +9,15 @@ from transformers import (
     DataCollatorForLanguageModeling,
 )
 
+import constants
 
-BASE_MODEL = "../../../serialized_models/medbert_512/"
-INPUT_DATA = "../../../data/test.csv"
-OUTPUT_PATH = "../../../serialized_models/medbert_512_pretrained/"
-TOKENIZER_LOC = "../../../serialized_models/medbert_512_pretrained/"
+
 NUM_PROC = 4
 
 csv_dataset = load_dataset(
-    "csv", data_files={"train": INPUT_DATA}, column_names=["id", "text", "etc"]
+    "csv",
+    data_files={"train": constants.REPORTS_CSV_FILE_PATH},
+    column_names=["id", "text", "etc"],
 )
 
 datasets = csv_dataset["train"].train_test_split(
@@ -26,7 +26,7 @@ datasets = csv_dataset["train"].train_test_split(
     seed=200,
 )
 
-tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_LOC)
+tokenizer = AutoTokenizer.from_pretrained(constants.PRETRAINED_MODEL_PATH)
 
 
 def tokenize_function(examples):
@@ -72,10 +72,10 @@ lm_datasets = tokenized_datasets.map(
 print(tokenizer.decode(lm_datasets["train"][1]["input_ids"]))
 
 
-model = AutoModelForMaskedLM.from_pretrained(BASE_MODEL)
+model = AutoModelForMaskedLM.from_pretrained(constants.BASE_MODEL_PATH)
 
 training_args = TrainingArguments(
-    OUTPUT_PATH,
+    constants.PRETRAINED_MODEL_PATH,
     evaluation_strategy="epoch",
     learning_rate=2e-5,
     weight_decay=0.01,
@@ -96,4 +96,4 @@ trainer = Trainer(
 trainer.train()
 
 eval_results = trainer.evaluate()
-print(f"Perplexity: {math.exp(eval_results['eval_loss']):.2f}")
+print(f"Perplexity: {eval_results['eval_loss']}")

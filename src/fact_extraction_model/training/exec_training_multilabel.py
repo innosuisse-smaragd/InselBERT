@@ -16,7 +16,8 @@ from torch.optim import AdamW
 import matplotlib.pyplot as plt
 import os
 
-BASE_MODEL = "./serialized_models/medbert_512/"
+import constants
+
 
 MAX_LENGTH = 512
 
@@ -46,7 +47,7 @@ train_ds = Dataset.from_json("./data/multilabel.train.jsonlines")
 val_ds = Dataset.from_json("./data/multilabel.validation.jsonlines")
 test_ds = Dataset.from_json("./data/multilabel.test.jsonlines")
 
-tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_PATH)
 
 
 def get_token_role_in_span(
@@ -151,10 +152,13 @@ test_dl = DataLoader(
 
 # Model instantiation
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-config = BertConfig.from_pretrained(BASE_MODEL)
+config = BertConfig.from_pretrained(constants.BASE_MODEL_PATH)
 
 model = model_multilabel.BertForMultiLabelClassification.from_pretrained(
-    BASE_MODEL, num_labels=NUM_LABELS, label2id=label2id, id2label=id2label
+    constants.BASE_MODEL_PATH,
+    num_labels=NUM_LABELS,
+    label2id=label2id,
+    id2label=id2label,
 )
 
 

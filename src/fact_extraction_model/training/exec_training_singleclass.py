@@ -20,12 +20,13 @@ import shutil
 import matplotlib.pyplot as plt
 import pandas as pd
 
+import constants
+
 
 # Constants
 
 FILE = "../../../data/iob2data.txt"
-BASE_MODEL = "../../../serialized_models/medbert_512/"
-OUTPUT_DIR = "../../../serialized_models/medbert_insel_facts"
+OUTPUT_DIR = "../../../serialized_models/single-class"
 BATCH_SIZE = 24
 LEARNING_RATE = 5e-5
 WEIGHT_DECAY = 1e-2
@@ -63,7 +64,7 @@ hf_dataset = DatasetDict(
 
 # Data preprocessing
 
-tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_PATH)
 
 
 def tokenize_and_align_labels(examples):
@@ -128,10 +129,13 @@ test_dl = DataLoader(
 
 # Model instantiation
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-config = BertConfig.from_pretrained(BASE_MODEL)
+config = BertConfig.from_pretrained(constants.BASE_MODEL_PATH)
 
 model = model_hf.BertForTokenClassification.from_pretrained(
-    BASE_MODEL, num_labels=NUM_LABELS, label2id=label2id, id2label=id2label
+    constants.BASE_MODEL_PATH,
+    num_labels=NUM_LABELS,
+    label2id=label2id,
+    id2label=id2label,
 )
 
 
