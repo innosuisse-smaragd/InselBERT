@@ -63,9 +63,9 @@ NUM_LABELS = len(id2label)
 # print(id2label)
 
 # if not done separately, applying the tokenization function via df.map() fails
-train_ds = Dataset.from_json("./data/multilabel.train.jsonlines")
-val_ds = Dataset.from_json("./data/multilabel.validation.jsonlines")
-test_ds = Dataset.from_json("./data/multilabel.test.jsonlines")
+train_ds = Dataset.from_json("./data/test/train.jsonlines")
+val_ds = Dataset.from_json("./data/test/validation.jsonlines")
+test_ds = Dataset.from_json("./data/test/test.jsonlines")
 
 # print(train_ds[0])
 
