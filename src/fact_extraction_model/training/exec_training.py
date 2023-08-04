@@ -24,7 +24,6 @@ from datetime import datetime
 
 import torch
 from seqeval.metrics import f1_score
-import shutil
 
 import wandb
 
@@ -32,7 +31,7 @@ import wandb
 BATCH_SIZE = 24
 LEARNING_RATE = 5e-5
 WEIGHT_DECAY = 1e-2
-NUM_EPOCHS = 100  # 100
+NUM_EPOCHS = 20  # 100
 MAX_LENGTH = 512
 
 run = wandb.init(
@@ -265,7 +264,7 @@ def align_predictions(labels_cpu, preds_cpu):
     return labels_list, preds_list
 
 
-def compute_f1_score(labels, logits):
+def compute_metrics_for_anchors(labels, logits):
     # convert logits to predictions and move to CPU
     preds_cpu = torch.argmax(logits, dim=-1).cpu().numpy()
     labels_cpu = labels.cpu().numpy()
@@ -279,7 +278,7 @@ def divide(a: int, b: int):
     return a / b if b > 0 else 0
 
 
-def compute_metrics(p):
+def compute_metrics_for_facts(p):
     """
     Customize the `compute_metrics` of `transformers`
     Args:
@@ -307,7 +306,7 @@ def compute_metrics(p):
         metrics[f"f1_{id2label[label_idx]}"] = f1
 
     macro_f1 = sum(list(metrics.values())) / (NUM_LABELS - 1)
-    metrics["macro_f1"] = macro_f1
+    metrics["macro_f1_facts"] = macro_f1
 
     return metrics
 
@@ -331,7 +330,8 @@ def do_train(model, train_dl):
 
 def do_eval(model, eval_dl):
     model.eval()
-    eval_loss, eval_score, num_batches = 0, 0, 0
+    eval_loss, eval_score, num_batches, f1_anchors = 0, 0, 0, 0
+    micro_metrics = {}
     for bid, batch in enumerate(eval_dl):
         batch = {k: v.to(device) for k, v in batch.items()}
         with torch.no_grad():
@@ -341,31 +341,28 @@ def do_eval(model, eval_dl):
 
         eval_loss += loss_averaged.detach().cpu().numpy()
         # eval_score += compute_f1_score(batch["labels"], outputs.logits)
-        metrics_facts = compute_metrics(
+        metrics_facts = compute_metrics_for_facts(
             [outputs["facts"].logits.cpu(), batch["labels_facts"].cpu()]
         )
-        metrics_anchors = compute_f1_score(
+        metrics_anchors = compute_metrics_for_anchors(
             batch["labels_anchors"].cpu(), outputs["anchors"].logits.cpu()
         )
-        eval_score += (metrics_facts["macro_f1"] + metrics_anchors) / 2
+        eval_score += (metrics_facts["macro_f1_facts"] + metrics_anchors) / 2
         num_batches += 1
+        micro_metrics = metrics_facts
+        f1_anchors = metrics_anchors
 
     eval_score /= num_batches
 
-    return eval_loss, eval_score
+    return eval_loss, eval_score, micro_metrics, f1_anchors
 
 
 def save_checkpoint(model, model_dir, epoch):
-    now = datetime.now()
-    dt_string = now.strftime("%d%m%Y_%H:%M:%S")
-    path = "medbert_512_finetuned_01_" + dt_string
-    model.save_pretrained(
-        os.path.join(constants.FINETUNED_MODEL_01_PATH, path),
-    )
+    model.save_pretrained(os.path.join(model_dir, "ckpt"))
 
 
 def save_training_history(history, model_dir, epoch):
-    fhist = open(os.path.join(constants.FINETUNED_MODEL_01_PATH, "history.tsv"), "w")
+    fhist = open(os.path.join(model_dir, "history.tsv"), "w")
     for epoch, train_loss, eval_loss, eval_score in history:
         fhist.write(
             "{:d}\t{:.5f}\t{:.5f}\t{:.5f}\n".format(
@@ -375,12 +372,27 @@ def save_training_history(history, model_dir, epoch):
     fhist.close()
 
 
+def save_micro_metrics(micro_metrics, model_dir, epoch):
+    fhist = open(os.path.join(model_dir, "fact_metrics.tsv"), "w")
+    for epoch, item in micro_metrics:
+        fhist.write("{:d}\t".format(epoch))
+        for key, value in item.items():
+            fhist.write("{}\t{:.5f}\t".format(key, value))
+        fhist.write("\n")
+    fhist.close()
+
+
 history = []
+micro_metrics = []
 
 best_eval_loss = 100
+now = datetime.now()
+dt_string = now.strftime("%d%m%Y%H%M")
+path = os.path.join(constants.FINETUNED_MODEL_01_PATH, dt_string)
 for epoch in range(NUM_EPOCHS):
     train_loss = do_train(model, train_dl)
-    eval_loss, eval_score = do_eval(model, valid_dl)
+    eval_loss, eval_score, micro_metrics_batch, f1_anchors = do_eval(model, valid_dl)
+    micro_metrics.append((epoch + 1, micro_metrics_batch))
     history.append((epoch + 1, train_loss, eval_loss, eval_score))
     print(
         "EPOCH {:d}, train loss: {:.3f}, val loss: {:.3f}, f1-score: {:.5f}".format(
@@ -388,13 +400,21 @@ for epoch in range(NUM_EPOCHS):
         )
     )
     wandb.log(
-        {"train_loss": train_loss, "validation_loss": eval_loss, "f1-score": eval_score}
+        {
+            "train_loss": train_loss,
+            "validation_loss": eval_loss,
+            "f1-score": eval_score,
+            "f1_anchors": f1_anchors,
+        }
     )
-    save_training_history(history, constants.FINETUNED_MODEL_01_PATH, epoch + 1)
+    for key, value in micro_metrics_batch.items():
+        wandb.log({key: value})
     if eval_loss < best_eval_loss:
         best_eval_loss = eval_loss
-        save_checkpoint(model, constants.FINETUNED_MODEL_01_PATH, epoch + 1)
+        save_checkpoint(model, path, epoch + 1)
         print("Model saved as current eval_loss is: ", best_eval_loss)
+    save_training_history(history, path, epoch + 1)
+    save_micro_metrics(micro_metrics, path, epoch + 1)
 
 
 def make_loss_diagram():
@@ -412,7 +432,7 @@ def make_loss_diagram():
     plt.legend(loc="best")
 
     plt.tight_layout()
-    plt.savefig(constants.FINETUNED_MODEL_01_PATH + "/loss.png", dpi=300)
+    plt.savefig(path + "/loss.png", dpi=300)
 
 
 make_loss_diagram()
