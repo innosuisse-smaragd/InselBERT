@@ -9,7 +9,7 @@ authors = [
 dependencies = [
     "torch>=2.0.1",
     "transformers>=4.31.0",
-    "smaragd-shared-python @ git+https://${GITHUB_ACCESS_TOKEN}@github.com/innosuisse-smaragd/smaragd-shared-python.git@v2.4.0",
+    "smaragd-shared-python @ git+https://${GITHUB_ACCESS_TOKEN}@github.com/innosuisse-smaragd/smaragd-shared-python.git@v2.5.0",
     "bentoml[io-json]>=1.0.22",
     "datasets>=2.13.1",
     "seqeval>=1.2.2",
