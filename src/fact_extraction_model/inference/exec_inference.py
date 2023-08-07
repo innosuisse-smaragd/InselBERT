@@ -1,18 +1,45 @@
+import pandas as pd
+import torch
+import shared.model_helpers as helper
+
 import fact_extraction_model.model.bert_two_heads as model_combined
 
-from fact_extraction_model.shared import BASE_MODEL, OUTPUT_DIR
 
-from transformers import AutoTokenizer
-import torch
-import pandas as pd
-
-model = model_combined.BertForFactAndAnchorClassification.from_pretrained(OUTPUT_DIR)
-tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+tokenizer = helper.getTokenizer()
+device = helper.getDevice()
 id2label_anchors = {}
+label2id_anchors = {}
 tag2id_facts = {}
 id2label_facts = {}
 label2id_facts = {}
+num_labels = len(id2label_facts)
+
+model = helper.getPretrainedModel(model_combined)
+model = model.to(device)
+
+tag2id = {
+    "PER": 1,
+    "ORG": 2,
+    "LOC": 3,
+    "MISC": 4,
+    "NCHUNK": 5,
+    "TIME": 6,
+    "PLACE": 7,
+}
+id2tag = {v: k for k, v in tag2id.items()}
+
+
+label2id_facts = {
+    "O": 0,
+    **{f"B-{k}": 2 * v - 1 for k, v in tag2id.items()},
+    **{f"I-{k}": 2 * v for k, v in tag2id.items()},
+}
+
+id2label_facts = {v: k for k, v in label2id_facts.items()}
+
+label2id_anchors = label2id_facts
+id2label_anchors = id2label_facts
+tag2id_facts = tag2id
 
 
 # Multi-label inference
@@ -32,7 +59,7 @@ def get_offsets_and_predicted_tags(example: str, model, tokenizer, threshold=0):
     encoded_example = tokenizer(example, return_tensors="pt").to(device)
 
     # Call the model. The output LxK-tensor where L is the number of tokens, K is the number of classes
-    out = model(**encoded_example)["logits"][0]
+    out = model(**encoded_example)["facts"]["logits"][0]
 
     # We assign to each token the classes whose logit is positive
     predicted_tags = [
@@ -96,7 +123,7 @@ def get_tagged_groups(example: str, model, tokenizer):
 
 example = "Du coup, la menace des feux de forêt est permanente, après les incendies dévastateurs de juillet dans le sud-ouest de la France, en Espagne, au Portugal ou en Grèce. Un important feu de forêt a éclaté le 24 juillet dans le parc national de la Suisse de Bohême, à la frontière entre la République tchèque et l'Allemagne, où des records de chaleur ont été battus (36,4C). Un millier d'hectares ont déjà été touchés. Lundi, les pompiers espéraient que l'incendie pourrait être maîtrisé en quelques jours."
 print(example)
-get_tagged_groups(example, model, tokenizer)
+print(get_tagged_groups(example, model, tokenizer))
 
 
 # Single-class inference
@@ -126,7 +153,7 @@ def predict(texts):
         inputs = tokenizer(text, return_tensors="pt").to(device)
         outputs = model(**inputs)
         tokens_cpu = tokenizer.convert_ids_to_tokens(inputs.input_ids.view(-1))
-        preds_cpu = torch.argmax(outputs.logits, dim=-1)[0].cpu().numpy()
+        preds_cpu = torch.argmax(outputs["anchors"].logits, dim=-1)[0].cpu().numpy()
 
         aligned_toks, aligned_preds = align_tokens_and_predicted_labels(
             tokens_cpu, preds_cpu
@@ -140,16 +167,14 @@ def predict(texts):
 
 predicted_tokens, predicted_tags = predict(
     [
-        ["Sie klagte über anhaltende Müdigkeit, Gewichtszunahme und trockene Haut ."],
         [
-            "In ihrer Krankengeschichte ist bekannt, dass sie an einer Schilddrüsenunterfunktion leidet und bereits mit Levothyroxin behandelt wird ."
+            "Du coup, la menace des feux de forêt est permanente, après les incendies dévastateurs de juillet dans le sud-ouest de la France, en Espagne, au Portugal ou en Grèce. Un important feu de forêt a éclaté le 24 juillet dans le parc national de la Suisse de Bohême, à la frontière entre la République tchèque et l'Allemagne, où des records de chaleur ont été battus (36,4C) . Un millier d'hectares ont déjà été touchés . Lundi, les pompiers espéraient que l'incendie pourrait être maîtrisé en quelques jours ."
         ],
     ]
 )
 
-pd.DataFrame(
+
+result = pd.DataFrame(
     [predicted_tokens[0], predicted_tags[0]], index=["tokens", "predicted_tags"]
 )
-pd.DataFrame(
-    [predicted_tokens[1], predicted_tags[1]], index=["tokens", "predicted_tags"]
-)
+print(result)

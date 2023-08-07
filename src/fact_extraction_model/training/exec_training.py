@@ -1,37 +1,33 @@
+import os
+from datetime import datetime
+
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 from datasets import Dataset
+from seqeval.metrics import f1_score
+from sklearn.metrics import multilabel_confusion_matrix
+from torch.optim import AdamW
+from torch.utils.data import DataLoader
 from transformers import (
     AutoTokenizer,
-    DataCollatorWithPadding,
     BertConfig,
+    DataCollatorWithPadding,
     get_scheduler,
 )
 
-import numpy as np
-from sklearn.metrics import multilabel_confusion_matrix
-
-import fact_extraction_model.model.bert_two_heads as model_combined
-from torch.utils.data import DataLoader
-from torch.optim import AdamW
-import matplotlib.pyplot as plt
-import os
-
-
 import constants
-from datetime import datetime
+import fact_extraction_model.model.bert_two_heads as model_combined
+import shared.model_helpers as helper
+import wandb
 
 # Imports
-
-
-import torch
-from seqeval.metrics import f1_score
-
-import wandb
 
 
 BATCH_SIZE = 24
 LEARNING_RATE = 5e-5
 WEIGHT_DECAY = 1e-2
-NUM_EPOCHS = 20  # 100
+NUM_EPOCHS = 100  # 100
 MAX_LENGTH = 512
 
 run = wandb.init(
@@ -71,7 +67,7 @@ test_ds = Dataset.from_json("./data/test/test.jsonlines")
 
 # print(train_ds[0])
 
-tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_PATH)
+tokenizer = helper.getTokenizer()
 
 
 def get_token_role_in_span(
@@ -222,16 +218,13 @@ test_dl = DataLoader(
 )
 
 # Model instantiation
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-config = BertConfig.from_pretrained(constants.BASE_MODEL_PATH)  # TODO: Adapt?
-
-model = model_combined.BertForFactAndAnchorClassification.from_pretrained(
-    constants.BASE_MODEL_PATH,
-    num_labels=NUM_LABELS,
+device = helper.getDevice()
+model = helper.getModel(
+    modelclass=model_combined,
+    NUM_LABELS=NUM_LABELS,
     label2id=label2id,
-    id2label=id2label,  # TODO: add other mappings- but how?
+    id2label=id2label,
 )
-
 model = model.to(device)
 
 wandb.watch(model, log_freq=100)
