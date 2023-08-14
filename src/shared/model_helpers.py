@@ -4,7 +4,7 @@ import torch
 
 
 def getTokenizer():
-    tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_PATH)
+    tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_PATH) # TODO: Adapt!
     return tokenizer
 
 
@@ -12,14 +12,14 @@ def getDevice():
     return torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 
-def getModel(modelclass, NUM_LABELS, label2id, id2label):
+def getModel(modelclass, num_labels):
     config = BertConfig.from_pretrained(constants.BASE_MODEL_PATH)  # TODO: Adapt?
 
     model = modelclass.BertForFactAndAnchorClassification.from_pretrained(
         constants.BASE_MODEL_PATH,
-        num_labels=NUM_LABELS,
-        label2id=label2id,
-        id2label=id2label,  # TODO: add other mappings- but how?
+        num_labels=num_labels
+       # label2id=label2id,
+       # id2label=id2label,  # TODO: add other mappings- but how?
     )
     return model
 

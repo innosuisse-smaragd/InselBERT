@@ -10,8 +10,6 @@ from sklearn.metrics import multilabel_confusion_matrix
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from transformers import (
-    AutoTokenizer,
-    BertConfig,
     DataCollatorWithPadding,
     get_scheduler,
 )
@@ -20,6 +18,7 @@ import constants
 import fact_extraction_model.model.bert_two_heads as model_combined
 import shared.model_helpers as helper
 import wandb
+import shared.schema_generator
 
 # Imports
 
@@ -45,22 +44,11 @@ run = wandb.init(
 
 torch.manual_seed(0)
 
-# TODO: Use method from shared-python and create three dicts for anchors, facts and modifiers
-tag2id = {"PER": 1, "ORG": 2, "LOC": 3, "MISC": 4, "NCHUNK": 5, "TIME": 6, "PLACE": 7}
-id2tag = {v: k for k, v in tag2id.items()}
-
-
-label2id = {
-    "O": 0,
-    **{f"B-{k}": 2 * v - 1 for k, v in tag2id.items()},
-    **{f"I-{k}": 2 * v for k, v in tag2id.items()},
-}
-
-id2label = {v: k for k, v in label2id.items()}
-NUM_LABELS = len(id2label)
-# print(id2label)
+schema = shared.schema_generator.SchemaGenerator() # FIXME: Modifiers not working atm
+NUM_LABELS_FACTS_ANCHORS = len(schema.label2id_anchors)
 
 # if not done separately, applying the tokenization function via df.map() fails
+# TODO: Replace with Smaragd CAS
 train_ds = Dataset.from_json("./data/test/train.jsonlines")
 val_ds = Dataset.from_json("./data/test/validation.jsonlines")
 test_ds = Dataset.from_json("./data/test/test.jsonlines")
@@ -115,8 +103,8 @@ def tokenize_and_adjust_labels(sample):  # TODO: Handle subword tokens -> -100
     # We are doing a multilabel classification task at each token, we create a list of size len(label2id)=13
     # for the 13 labels
     labels_facts = [
-        [0 for _ in label2id.keys()] for _ in range(MAX_LENGTH)
-    ]  # TODO: label2id_facts
+        [0 for _ in schema.label2id_facts.keys()] for _ in range(MAX_LENGTH)
+    ]
 
     # Scan all the tokens and spans, assign 1 to the corresponding label if the token lies at the beginning
     # or inside the spans
@@ -124,17 +112,17 @@ def tokenize_and_adjust_labels(sample):  # TODO: Handle subword tokens -> -100
     for (token_start, token_end), token_labels, word_id in zip(
         tokenized["offset_mapping"], labels_facts, tokenized.word_ids()
     ):
-        for span in sample["tags"]:  # TODO: fact_tags
+        for span in sample["fact_tags"]:
             role = get_token_role_in_span(
                 token_start, token_end, span["start"], span["end"]
             )
             if role == "B":
-                token_labels[label2id[f"B-{span['tag']}"]] = 1  # TODO: label2id_facts
+                token_labels[schema.label2id_facts[f"B-{span['tag']}"]] = 1
             elif role == "I":
-                token_labels[label2id[f"I-{span['tag']}"]] = 1  # TODO: label2id_facts
+                token_labels[schema.label2id_facts[f"I-{span['tag']}"]] = 1
             previous_word_id = word_id
 
-    # TODO: Repeat for all three label dimensions
+
     # We are doing a multilabel classification task at each token, we create a list of size len(label2id)=13
     # for the 13 labels
     labels_anchors = [[0 for _ in range(1)] for _ in range(MAX_LENGTH)]
@@ -147,16 +135,16 @@ def tokenize_and_adjust_labels(sample):  # TODO: Handle subword tokens -> -100
     ):
         # for span in sample["tags"]:
 
-        span = sample["tags"][0]  # TODO: anchor_tags # Only one annotation per anchor
+        span = sample["anchor_tags"][0]  # TODO: anchor_tags, only one annotation per anchor
         role = get_token_role_in_span(
             token_start, token_end, span["start"], span["end"]
         )
         if previous_word_id == word_id:
             token_labels[0] = -100
         elif role == "B":
-            token_labels[0] = label2id[f"B-{span['tag']}"]  # TODO: label2id_anchors
+            token_labels[0] = schema.label2id_anchors[f"B-{span['tag']}"]
         elif role == "I":
-            token_labels[0] = label2id[f"I-{span['tag']}"]  # TODO: label2id_anchors
+            token_labels[0] = schema.label2id_anchors[f"I-{span['tag']}"]
         elif role == "N":
             token_labels[0] = -100
         else:
@@ -221,9 +209,9 @@ test_dl = DataLoader(
 device = helper.getDevice()
 model = helper.getModel(
     modelclass=model_combined,
-    NUM_LABELS=NUM_LABELS,
-    label2id=label2id,
-    id2label=id2label,
+    num_labels=NUM_LABELS_FACTS_ANCHORS
+    #label2id=label2id,
+   # id2label=id2label,
 )
 model = model.to(device)
 
