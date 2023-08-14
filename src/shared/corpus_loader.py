@@ -6,17 +6,16 @@ from smaragd_shared_python.report.report_parser import ReportParser
 
 from constants import REPORTS_CSV_FILE_PATH
 
-# from env import DECRYPTION_KEY
+from env import DECRYPTION_KEY
 
 
 class CorpusLoader:
 
-    def load_corpus(self, returnTokenized = False, decryptionKey= None) -> list[Report]:
-        tokenizer = None
-        if (returnTokenized):
-            tokenizer = SpacyTokenizer()
+    def load_corpus(self, returnTokenized = False) -> list[Report]:
+        decryption_key = DECRYPTION_KEY if DECRYPTION_KEY != "undefined" else None
+        tokenizer = SpacyTokenizer() if returnTokenized else None
         reports = ReportParser.parse_report_csv(
-            REPORTS_CSV_FILE_PATH, decryptionKey, tokenizer
+            REPORTS_CSV_FILE_PATH, decryption_key, tokenizer
         )
         return reports
 
