@@ -3,20 +3,19 @@
 
 
 from transformers import AutoTokenizer
-import datasets
+import shared.corpus_loader as loader
 import constants
 
 
 def pretrain_tokenizer():
-    csv_dataset = datasets.load_dataset(
-        "csv",
-        data_files={"train": constants.REPORTS_CSV_FILE_PATH},
-        column_names=["id", "text", "etc"],  # TODO: adjust column names
-    )
+    corpus_loader = loader.CorpusLoader()
+
+    reports = corpus_loader.load_corpus()
+    csv_dataset = corpus_loader.convert_corpus_to_dataset_text(reports=reports)
 
     print("number of rows: ", csv_dataset.num_rows)
 
-    training_corpus = get_training_corpus(csv_dataset)
+    training_corpus = get_training_corpus_generator(csv_dataset)
 
     old_tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_PATH)
 
@@ -24,22 +23,10 @@ def pretrain_tokenizer():
 
     tokenizer.save_pretrained(constants.PRETRAINED_MODEL_PATH)
 
-    # Evaluation
-
-    example = "Let's test this tokenizer on a pair of sentences."
-
-    new_encoding = tokenizer(example)
-    old_encoding = old_tokenizer(example)
-    print(len(new_encoding.tokens()))
-    print(new_encoding.tokens())
-    print(len(old_encoding.tokens()))
-    print(old_encoding.tokens())
-
-
-def get_training_corpus(dataset):
-    dataset = dataset["train"]
+def get_training_corpus_generator(dataset):
+    # dataset = dataset["train"]
     for i in range(0, len(dataset), 1000):
-        yield dataset[i : i + 1000]["text"]  # TODO: adjust column name
+        yield dataset[i : i + 1000][constants.REPORTS_CSV_FILE_COLUMN_NAME]
 
 
 pretrain_tokenizer()

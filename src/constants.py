@@ -1,4 +1,5 @@
 REPORTS_CSV_FILE_PATH = "./data/protected/radiology-reports.csv"
+REPORTS_CSV_FILE_COLUMN_NAME="text"
 ANNOTATED_REPORTS_PATH = "./data/protected/annotated-reports"
 
 BASE_MODEL_PATH = "./serialized_models/medbert_512/"
