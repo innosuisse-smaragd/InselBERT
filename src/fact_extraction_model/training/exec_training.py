@@ -44,7 +44,7 @@ run = wandb.init(
 
 torch.manual_seed(0)
 
-schema = shared.schema_generator.SchemaGenerator() # FIXME: Modifiers not working atm
+schema = shared.schema_generator.SchemaGenerator()  # TODO: Impact of sharing modifiers (current implementation)
 NUM_LABELS_FACTS_ANCHORS = len(schema.label2id_anchors)
 
 # if not done separately, applying the tokenization function via df.map() fails

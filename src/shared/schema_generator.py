@@ -43,12 +43,13 @@ class SchemaGenerator:
             tag_names = [anchor.class_name for anchor in anchors]
         elif entity == "modifiers":
             modifiers = reasoner.get_entities(Modifier.get_type())
-            tag_names = [modifier.class_name for modifier in modifiers] # FIXME:not working
+            tag_names = [modifier.class_name for modifier in modifiers]
 
-        id = 1
+        index = 1
         for element in tag_names:
-            result[element] = id
-            id += 1
+            if element not in result:
+                result[element] = index
+            index += 1
         return result
 
     @staticmethod
