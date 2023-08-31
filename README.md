@@ -1,5 +1,19 @@
 # LLM-based, two-layer clinical fact extraction based on the approach by Steinkamp et al.
 
+## Repo set-up
+
+- Install pdm on your machine: https://pdm.fming.dev/latest/
+- cd into project root
+- run `pdm venv activate` and copy and run the output (needs testing) 
+- alternatively, start your own environment of choice (python 3.11)
+- run `pdm install`
+
+## Scripts
+
+Run the exec_XXX.py files from the project root, specifying the whole path, e.g.:
+`python3 src/fact_extraction_model/training/exec_training.py`
+
+
 ## Description of serialized models
 
 ### medbert_512
@@ -29,3 +43,6 @@ This folder contains the second, fine-tuned model which is composed of the same 
 
 - Context information: How can we integrate context information (which fact was identified, position of anchor, position of fact within wider context) into the model?
 - Fact candidate calculation: Where and how are fact candidates calculated? Is this part of one of the two models?
+- Sharing of modifiers: What impact does sharing of modifiers have on performance?
+- Ignore special tokens: Multi-label classification does not automatically ignore -100 tokens when calculating loss. 
+- Merging facts: What impact does merging of facts with the same modifiers have on model performance and structuring? 
