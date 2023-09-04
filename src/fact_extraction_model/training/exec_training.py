@@ -238,8 +238,8 @@ def align_predictions(labels_cpu, preds_cpu):
         for sid in range(seq_len):
             # ignore label -100
             if labels_cpu[bid, sid] != -100:
-                example_labels.append(id2label[labels_cpu[bid, sid]])
-                example_preds.append(id2label[preds_cpu[bid, sid]])
+                example_labels.append(schema.id2label_anchors[labels_cpu[bid, sid]])
+                example_preds.append(schema.id2label_anchors[preds_cpu[bid, sid]])
         labels_list.append(example_labels)
         preds_list.append(example_preds)
     return labels_list, preds_list
@@ -274,7 +274,7 @@ def compute_metrics_for_facts(p):
     metrics = {}
 
     cm = multilabel_confusion_matrix(
-        true_labels.reshape(-1, NUM_LABELS), predicted_labels.reshape(-1, NUM_LABELS)
+        true_labels.reshape(-1, NUM_LABELS_FACTS_ANCHORS), predicted_labels.reshape(-1, NUM_LABELS_FACTS_ANCHORS)
     )
 
     for label_idx, matrix in enumerate(cm):
@@ -284,9 +284,9 @@ def compute_metrics_for_facts(p):
         precision = divide(tp, tp + fp)
         recall = divide(tp, tp + fn)
         f1 = divide(2 * precision * recall, precision + recall)
-        metrics[f"f1_{id2label[label_idx]}"] = f1
+        metrics[f"f1_{schema.id2label_facts[label_idx]}"] = f1
 
-    macro_f1 = sum(list(metrics.values())) / (NUM_LABELS - 1)
+    macro_f1 = sum(list(metrics.values())) / (NUM_LABELS_FACTS_ANCHORS - 1)
     metrics["macro_f1_facts"] = macro_f1
 
     return metrics
