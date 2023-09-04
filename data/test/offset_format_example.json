@@ -1,0 +1,47 @@
+[
+  {
+    'id': '0',
+    'fact_tags': [
+      {
+        'start': 0,
+        'end': 77,
+        'tag': 'Herdbefund beobachtet'
+      },
+      {
+        'start': 79,
+        'end': 103,
+        'tag': 'Architekturstörung beobachtet'
+      }
+    ],
+    'anchor_tags': [
+      {
+        'start': 67,
+        'end': 77,
+        'tag': 'Herdbefund'
+      },
+      {
+        'start': 85,
+        'end': 103,
+        'tag': 'Architekturstörung'
+      }
+    ],
+    'modifier_tags': [
+      {
+        'start': 42,
+        'end': 54,
+        'tag': 'Grösse'
+      },
+      {
+        'start': 55,
+        'end': 66,
+        'tag': 'Rand'
+      },
+      {
+        'start': 79,
+        'end': 84,
+        'tag': 'Negation'
+      }
+    ],
+    'text': 'Rechts bei 7 Uhr in 28 mm MD fraglich ein 8 mm grosser lobulierter Herdbefund. Keine Architekturstörung.'
+  }
+]

@@ -4,7 +4,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from datasets import Dataset
+from datasets import Dataset, DatasetDict
 from seqeval.metrics import f1_score
 from sklearn.metrics import multilabel_confusion_matrix
 from torch.optim import AdamW
@@ -19,6 +19,7 @@ import fact_extraction_model.model.bert_two_heads as model_combined
 import shared.model_helpers as helper
 import wandb
 import shared.schema_generator
+from shared.cas_loader import CASLoader
 
 # Imports
 
@@ -47,13 +48,26 @@ torch.manual_seed(0)
 schema = shared.schema_generator.SchemaGenerator()  # TODO: Impact of sharing modifiers (current implementation)
 NUM_LABELS_FACTS_ANCHORS = len(schema.label2id_anchors)
 
-# if not done separately, applying the tokenization function via df.map() fails
-# TODO: Replace with Smaragd CAS
-train_ds = Dataset.from_json("./data/test/train.jsonlines")
-val_ds = Dataset.from_json("./data/test/validation.jsonlines")
-test_ds = Dataset.from_json("./data/test/test.jsonlines")
+loader = CASLoader(constants.ANNOTATED_REPORTS_PATH)
+reports = loader.load_CAS_convert_to_offset_dict()
+dataset_unsplit = Dataset.from_list(reports)
 
-# print(train_ds[0])
+
+
+# split twice and combine
+train_devtest = dataset_unsplit.train_test_split(
+    shuffle=True, seed=200, test_size=0.3
+)
+hf_dev_test = train_devtest["test"].train_test_split(
+    shuffle=True, seed=200, test_size=0.50
+)
+hf_dataset = DatasetDict(
+    {
+        "train": train_devtest["train"],
+        "test": hf_dev_test["test"],
+        "validation": hf_dev_test["train"],
+    }
+)
 
 tokenizer = helper.getTokenizer()
 
@@ -109,8 +123,8 @@ def tokenize_and_adjust_labels(sample):  # TODO: Handle subword tokens -> -100
     # Scan all the tokens and spans, assign 1 to the corresponding label if the token lies at the beginning
     # or inside the spans
     previous_word_id = None
-    for (token_start, token_end), token_labels, word_id in zip(
-        tokenized["offset_mapping"], labels_facts, tokenized.word_ids()
+    for (token_start, token_end), token_labels in zip(
+            tokenized["offset_mapping"], labels_facts
     ):
         for span in sample["fact_tags"]:
             role = get_token_role_in_span(
@@ -120,8 +134,6 @@ def tokenize_and_adjust_labels(sample):  # TODO: Handle subword tokens -> -100
                 token_labels[schema.label2id_facts[f"B-{span['tag']}"]] = 1
             elif role == "I":
                 token_labels[schema.label2id_facts[f"I-{span['tag']}"]] = 1
-            previous_word_id = word_id
-
 
     # We are doing a multilabel classification task at each token, we create a list of size len(label2id)=13
     # for the 13 labels
@@ -129,27 +141,19 @@ def tokenize_and_adjust_labels(sample):  # TODO: Handle subword tokens -> -100
 
     # Scan all the tokens and spans, assign 1 to the corresponding label if the token lies at the beginning
     # or inside the spans
-    previous_word_id = None
-    for (token_start, token_end), token_labels, word_id in zip(
-        tokenized["offset_mapping"], labels_anchors, tokenized.word_ids()
+    for (token_start, token_end), token_labels in zip(
+            tokenized["offset_mapping"], labels_anchors
     ):
         # for span in sample["tags"]:
 
-        span = sample["anchor_tags"][0]  # TODO: anchor_tags, only one annotation per anchor
-        role = get_token_role_in_span(
-            token_start, token_end, span["start"], span["end"]
-        )
-        if previous_word_id == word_id:
-            token_labels[0] = -100
-        elif role == "B":
-            token_labels[0] = schema.label2id_anchors[f"B-{span['tag']}"]
-        elif role == "I":
-            token_labels[0] = schema.label2id_anchors[f"I-{span['tag']}"]
-        elif role == "N":
-            token_labels[0] = -100
-        else:
-            token_labels[0] = 0
-        previous_word_id = word_id
+        for span in sample["anchor_tags"]: # TODO: anchor_tags, only one annotation per anchor
+            role = get_token_role_in_span(
+                token_start, token_end, span["start"], span["end"]
+            )
+            if role == "B":
+                token_labels[0] = schema.label2id_anchors[f"B-{span['tag']}"]
+            elif role == "I":
+                token_labels[0] = schema.label2id_anchors[f"I-{span['tag']}"]
 
         # token_labels[0] = token_labels[0].item()
     labels_anchors_ = []
@@ -165,18 +169,28 @@ def tokenize_and_adjust_labels(sample):  # TODO: Handle subword tokens -> -100
     }
 
 
-# if not done separately, applying the tokenization function via df.map() fails
-tokenized_train_ds = train_ds.map(
-    tokenize_and_adjust_labels, remove_columns=train_ds.column_names
-)
-tokenized_val_ds = val_ds.map(
-    tokenize_and_adjust_labels, remove_columns=val_ds.column_names
-)
-tokenized_test_ds = test_ds.map(
-    tokenize_and_adjust_labels, remove_columns=val_ds.column_names
+tokenized_hf_ds = hf_dataset.map(
+    tokenize_and_adjust_labels, remove_columns=hf_dataset["train"].column_names
 )
 
-# print(tokenized_train_ds[0])
+sample = tokenized_hf_ds["train"][0]
+
+print("--------Token---------|--------Labels----------")
+for token_id, token_labels, anchor_labels in zip(sample["input_ids"], sample["labels_facts"], sample["labels_anchors"]):
+    # Decode the token_id into text
+    token_text = tokenizer.decode(token_id)
+
+    # Retrieve all the indices corresponding to the "1" at each token, decode them to label name
+    labels = [schema.id2label_facts[label_index] for label_index, value in enumerate(token_labels) if value == 1]
+
+    # Decode those indices into label name
+    print(f" {token_text:20} | {labels} | {anchor_labels}")
+
+    # Finish when we meet the end of sentence.
+    if token_text == "</s>":
+        break
+
+
 
 # data_collator = DataCollatorWithPadding(tokenizer, padding=True)
 data_collator = DataCollatorWithPadding(
@@ -184,21 +198,21 @@ data_collator = DataCollatorWithPadding(
 )
 
 train_dl = DataLoader(
-    tokenized_train_ds,
+    tokenized_hf_ds["train"],
     shuffle=True,
     # sampler=SubsetRandomSampler(np.random.randint(0, encoded_gmb_dataset["train"].num_rows, 1000).tolist()),
     batch_size=BATCH_SIZE,
     collate_fn=data_collator,
 )
 valid_dl = DataLoader(
-    tokenized_val_ds,
+    tokenized_hf_ds["validation"],
     shuffle=False,
     # sampler=SubsetRandomSampler(np.random.randint(0, encoded_gmb_dataset["validation"].num_rows, 200).tolist()),
     batch_size=BATCH_SIZE,
     collate_fn=data_collator,
 )
 test_dl = DataLoader(
-    tokenized_test_ds,
+    tokenized_hf_ds["test"],
     shuffle=False,
     #  sampler=SubsetRandomSampler(np.random.randint(0, encoded_gmb_dataset["test"].num_rows, 100).tolist()),
     batch_size=BATCH_SIZE,
@@ -210,8 +224,8 @@ device = helper.getDevice()
 model = helper.getModel(
     modelclass=model_combined,
     num_labels=NUM_LABELS_FACTS_ANCHORS
-    #label2id=label2id,
-   # id2label=id2label,
+    # label2id=label2id,
+    # id2label=id2label,
 )
 model = model.to(device)
 
