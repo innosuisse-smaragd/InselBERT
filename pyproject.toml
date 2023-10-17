@@ -33,3 +33,5 @@ check-import-order = {cmd = "isort ./src ./test --check-only"}
 fix-import-order = {cmd = "isort ./src ./test"}
 build-bento = {cmd = "bentoml build ./src/refinement_model/inference -f ./src/refinement-model/inference/bentofile.yaml"}
 run-bento-dev = {cmd = "bentoml serve service:svc --reload --working-dir ./src/refinement-model/inference"}
+pretrain-tokenizer = {call = "src.tokenization.training.exec_training:pretrain_tokenizer"}
+further-pretrain = {call = "src.further_pre_training.training.exec_training:further_pretrain_model"}
