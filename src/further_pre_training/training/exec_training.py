@@ -13,17 +13,16 @@ import shared.corpus_loader as loader
 
 
 def further_pretrain_model():
-
+    print("Loading corpus")
     corpus_loader = loader.CorpusLoader()
 
     NUM_PROC = 4
     BATCHED = True
     # block_size = tokenizer.model_max_length
-    BLOCK_SIZE = 128
+    # BLOCK_SIZE = 128
 
-    reports = corpus_loader.load_corpus(returnTokenized=True)
-    csv_dataset= corpus_loader.convert_corpus_to_dataset(reports)
-
+    reports = corpus_loader.load_corpus()
+    csv_dataset = corpus_loader.convert_corpus_to_dataset_text(reports)
 
     datasets = csv_dataset.train_test_split(
         test_size=0.1,
@@ -33,18 +32,20 @@ def further_pretrain_model():
     print(datasets)
     print(datasets['train'][0])
 
+    # tokenizer = AutoTokenizer.from_pretrained(constants.PRETRAINED_MODEL_PATH)
+    tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_NAME)
 
-    tokenizer = AutoTokenizer.from_pretrained(constants.PRETRAINED_MODEL_PATH)
+    BLOCK_SIZE = tokenizer.model_max_length
+    print("Block size", BLOCK_SIZE)
 
     def tokenize_function(examples):
-        return tokenizer(text=examples["tokens"], is_split_into_words=True)
-
+        return tokenizer(text=examples["text"], is_split_into_words=False)
 
     tokenized_datasets = datasets.map(
         tokenize_function,
         batched=BATCHED,
         num_proc=NUM_PROC,
-        remove_columns=["tokens"]
+        remove_columns=["text"]
     )
     print(tokenized_datasets["train"][1])
     print("Finished tokenization")
@@ -58,27 +59,26 @@ def further_pretrain_model():
         total_length = (total_length // BLOCK_SIZE) * BLOCK_SIZE
         # Split by chunks of max_len.
         result = {
-            k: [t[i : i + BLOCK_SIZE] for i in range(0, total_length, BLOCK_SIZE)]
+            k: [t[i: i + BLOCK_SIZE] for i in range(0, total_length, BLOCK_SIZE)]
             for k, t in concatenated_examples.items()
         }
         result["labels"] = result["input_ids"].copy()
         return result
 
-
     lm_datasets = tokenized_datasets.map(
         group_texts,
         batched=True,
-        batch_size=1000,
+        batch_size=500,  # 1000
         num_proc=NUM_PROC,
     )
 
     print(tokenizer.decode(lm_datasets["train"][1]["input_ids"]))
     print("Finished grouping texts")
 
-    #print(tokenizer.decode(lm_datasets["train"][1]["input_ids"]))
+    # print(tokenizer.decode(lm_datasets["train"][1]["input_ids"]))
 
-
-    model = AutoModelForMaskedLM.from_pretrained(constants.BASE_MODEL_PATH)
+    # model = AutoModelForMaskedLM.from_pretrained(constants.BASE_MODEL_PATH)
+    model = AutoModelForMaskedLM.from_pretrained(constants.BASE_MODEL_NAME)
 
     training_args = TrainingArguments(
         constants.PRETRAINED_MODEL_PATH,
@@ -99,6 +99,7 @@ def further_pretrain_model():
         data_collator=data_collator,
     )
 
+    print("Start training")
     trainer.train()
 
     eval_results = trainer.evaluate()

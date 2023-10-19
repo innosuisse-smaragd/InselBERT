@@ -5,8 +5,9 @@ from smaragd_shared_python.report.report import Report
 from smaragd_shared_python.report.report_parser import ReportParser
 
 from constants import REPORTS_CSV_FILE_PATH
+import os
 
-from env import DECRYPTION_KEY
+DECRYPTION_KEY = os.environ.get("DECRYPTION_KEY", "undefined")
 
 
 class CorpusLoader:

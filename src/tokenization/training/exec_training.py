@@ -10,7 +10,7 @@ import constants
 def pretrain_tokenizer():
     corpus_loader = loader.CorpusLoader()
 
-    reports = corpus_loader.load_corpus(returnTokenized=True)  # not sure if we should return tokenized
+    reports = corpus_loader.load_corpus()  # not sure if we should return tokenized
     csv_dataset = corpus_loader.convert_corpus_to_dataset_text(reports=reports)
 
     print("number of rows: ", csv_dataset.num_rows)
@@ -18,7 +18,7 @@ def pretrain_tokenizer():
 
     training_corpus = get_training_corpus_generator(csv_dataset)
 
-    old_tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_PATH)
+    old_tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_NAME)
 
     tokenizer = old_tokenizer.train_new_from_iterator(training_corpus, 52000)
 
