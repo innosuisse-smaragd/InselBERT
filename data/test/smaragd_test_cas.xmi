@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI
+        xmlns:xmi="http://www.omg.org/XMI" xmlns:cas="http:///uima/cas.ecore" xmlns:smaragd="http:///smaragd.ecore"
+        xmi:version="2.0">
+  <cas:NULL xmi:id="0"/>
+  <cas:Sofa xmi:id="1" sofaNum="1" sofaID="_InitialView" mimeType="text"
+            sofaString="Rechts bei 7 Uhr in 28 mm MD fraglich ein 8 mm grosser lobulierter Herdbefund. Keine Architekturstörung."/>
+  <smaragd:DocumentMetaData sofa="1" xmi:id="100" documentId="0" humanAnnotator="Müller"/>
+  <smaragd:Token sofa="1" xmi:id="201" begin="7" end="10"/>
+  <smaragd:Token sofa="1" xmi:id="200" begin="0" end="6"/> <!-- This token is not in the correct order -->
+  <smaragd:Token sofa="1" xmi:id="202" begin="13" end="14"/>
+  <smaragd:Token sofa="1" xmi:id="203" begin="17" end="19"/>
+  <smaragd:Token sofa="1" xmi:id="204" begin="20" end="22"/>
+  <smaragd:Token sofa="1" xmi:id="205" begin="23" end="25"/>
+  <smaragd:Token sofa="1" xmi:id="206" begin="29" end="37"/>
+  <smaragd:Token sofa="1" xmi:id="207" begin="38" end="41"/>
+  <smaragd:Token sofa="1" xmi:id="208" begin="42" end="43"/>
+  <smaragd:Token sofa="1" xmi:id="209" begin="44" end="46"/>
+  <smaragd:Token sofa="1" xmi:id="210" begin="47" end="54"/>
+  <smaragd:Token sofa="1" xmi:id="211" begin="55" end="66"/>
+  <smaragd:Token sofa="1" xmi:id="212" begin="67" end="77"/>
+  <smaragd:Token sofa="1" xmi:id="213" begin="77" end="78"/>
+  <smaragd:Token sofa="1" xmi:id="214" begin="79" end="84"/>
+  <smaragd:Token sofa="1" xmi:id="215" begin="85" end="103"/>
+  <smaragd:Token sofa="1" xmi:id="216" begin="103" end="104"/>
+
+  <smaragd:Fact sofa="1" xmi:id="300" begin="0" end="77" factValue="Herdläsion beschrieben" anchorRelation="400"
+                modifierRelations="500 501"/>
+  <smaragd:AnchorEntity sofa="1" xmi:id="400" begin="67" end="77" anchorEntityValue="Herdläsion"/>
+  <smaragd:Modifier sofa="1" xmi:id="500" begin="55" end="66" modifierValue="Herdläsion_Rand"/>
+  <smaragd:Modifier sofa="1" xmi:id="501" begin="42" end="54" modifierValue="Grösse"/>
+
+  <smaragd:Fact sofa="1" xmi:id="301" begin="79" end="103" factValue="Architekturstörung beschrieben" anchorRelation="401"
+                modifierRelations="502"/>
+  <smaragd:AnchorEntity sofa="1" xmi:id="401" begin="85" end="103" anchorEntityValue="Architekturstörung"/>
+  <smaragd:Modifier sofa="1" xmi:id="502" begin="79" end="84" modifierValue="Negation"/>
+
+  <cas:View sofa="1" members="100 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 300 301 400 401 500 501 502"/>
+</xmi:XMI>

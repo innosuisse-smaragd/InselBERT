@@ -1,0 +1,225 @@
+{
+  'id': '0001_BI-RADS%201_AllBIRADSexcept2_Reports%20with%20GCok_04052023.xlsx_1081.xmi',
+  'fact_tags': [
+    {
+      'end': 52,
+      'start': 1,
+      'tag': 'Bildgebendes Verfahren durchgeführt'
+    },
+    {
+      'end': 487,
+      'start': 455,
+      'tag': 'Bildgebendes Verfahren durchgeführt'
+    },
+    {
+      'end': 519,
+      'start': 467,
+      'tag': 'Kutis beschrieben'
+    },
+    {
+      'end': 519,
+      'start': 467,
+      'tag': 'Subkutis beschrieben'
+    },
+    {
+      'end': 587,
+      'start': 521,
+      'tag': 'Parenchymdichte beschrieben'
+    },
+    {
+      'end': 622,
+      'start': 589,
+      'tag': 'Herdläsion beschrieben'
+    },
+    {
+      'end': 654,
+      'start': 624,
+      'tag': 'Verkalkung beschrieben'
+    },
+    {
+      'end': 720,
+      'start': 669,
+      'tag': 'Klinischer Befund / Anamnese / Diagnose'
+    },
+    {
+      'end': 742,
+      'start': 723,
+      'tag': 'ACR Klassifizierung erwähnt'
+    },
+    {
+      'end': 762,
+      'start': 744,
+      'tag': 'BI-RADS Klassifizierung erwähnt'
+    },
+    {
+      'end': 903,
+      'start': 765,
+      'tag': 'Empfehlung für weitere Untersuchung'
+    }
+  ],
+  'anchor_tags': [
+    {
+      'end': 12,
+      'start': 1,
+      'tag': 'Modalität'
+    },
+    {
+      'end': 466,
+      'start': 455,
+      'tag': 'Modalität'
+    },
+    {
+      'end': 494,
+      'start': 489,
+      'tag': 'Kutis'
+    },
+    {
+      'end': 507,
+      'start': 499,
+      'tag': 'Subkutis'
+    },
+    {
+      'end': 577,
+      'start': 562,
+      'tag': 'Parenchym'
+    },
+    {
+      'end': 622,
+      'start': 612,
+      'tag': 'Herdläsion'
+    },
+    {
+      'end': 654,
+      'start': 639,
+      'tag': 'Verkalkung'
+    },
+    {
+      'end': 710,
+      'start': 689,
+      'tag': 'Information / Befund / Anamnese / Diagnose'
+    },
+    {
+      'end': 732,
+      'start': 723,
+      'tag': 'ACR Klassifizierung'
+    },
+    {
+      'end': 752,
+      'start': 744,
+      'tag': 'BI-RADS Klassifizierung'
+    },
+    {
+      'end': 868,
+      'start': 851,
+      'tag': 'Empfehlung'
+    }
+  ],
+  'modifier_tags': [
+    {
+      'end': 22,
+      'start': 13,
+      'tag': 'Lateralität'
+    },
+    {
+      'end': 37,
+      'start': 23,
+      'tag': 'Projektionsebene'
+    },
+    {
+      'end': 52,
+      'start': 38,
+      'tag': 'Zeit / Datum'
+    },
+    {
+      'end': 476,
+      'start': 467,
+      'tag': 'Lateralität'
+    },
+    {
+      'end': 476,
+      'start': 467,
+      'tag': 'Lateralität'
+    },
+    {
+      'end': 476,
+      'start': 467,
+      'tag': 'Lateralität'
+    },
+    {
+      'end': 487,
+      'start': 477,
+      'tag': 'Projektionsebene'
+    },
+    {
+      'end': 519,
+      'start': 508,
+      'tag': 'Zustand'
+    },
+    {
+      'end': 519,
+      'start': 508,
+      'tag': 'Zustand'
+    },
+    {
+      'end': 536,
+      'start': 521,
+      'tag': 'Parenchymdichte_Transparenz'
+    },
+    {
+      'end': 561,
+      'start': 538,
+      'tag': 'Zustand'
+    },
+    {
+      'end': 587,
+      'start': 578,
+      'tag': 'Lateralität'
+    },
+    {
+      'end': 593,
+      'start': 589,
+      'tag': 'Negation'
+    },
+    {
+      'end': 611,
+      'start': 594,
+      'tag': 'Dignität'
+    },
+    {
+      'end': 629,
+      'start': 624,
+      'tag': 'Negation'
+    },
+    {
+      'end': 683,
+      'start': 669,
+      'tag': 'Diagnostisches Verfahren'
+    },
+    {
+      'end': 688,
+      'start': 684,
+      'tag': 'Negation'
+    },
+    {
+      'end': 720,
+      'start': 711,
+      'tag': 'Lateralität'
+    },
+    {
+      'end': 742,
+      'start': 733,
+      'tag': 'Lateralität'
+    },
+    {
+      'end': 762,
+      'start': 753,
+      'tag': 'Lateralität'
+    },
+    {
+      'end': 892,
+      'start': 869,
+      'tag': 'Diagnoseverfahren'
+    }
+  ],
+  'text': '\nMAMMOGRAFIE BEIDSEITS IN ZWEI EBENEN VOM 22.06.2021\n\nFragestellung/Indikation\nMet. Adeno-Ca, unkl. Primarius. (CT-Befund vom 10.6.21 mit Vd. a. i.e.L. DD HCC, DD CCC.\nPositive Familienanamnese für Brustkrebs (Tante väterlicherseits).\nMalignität/Auffälligkeiten?\n\nKlinische Untersuchung und Ultraschall:\nDurchführung in der gynäkologischen Senologie dieser Klinik (Bericht siehe dort).\n\nBefund\nZum Vergleich liegt die Voruntersuchung vom 28.09.2020 vor.\n\nMammografie beidseits MLO und CC:\nKutis und Subkutis unauffällig.\nMittelfleckiges, teilweise involutiertes Drüsenparenchym beidseits.\nKein malignomsuspekter Herdbefund. Keine suspekte Mikrokalkgruppe.\n\nBeurteilung\nMammographisch kein Anhalt für Malignität beidseits.\n\nACR-Typ b beidseits.\nBIRADS 1 beidseits.\n\nFalls auch der Ultraschallbefund der Brust unauffällig sein sollte, wäre eine weitere Befundabsicherung mittels MR Mammographie zu erwägen. \n'
+}

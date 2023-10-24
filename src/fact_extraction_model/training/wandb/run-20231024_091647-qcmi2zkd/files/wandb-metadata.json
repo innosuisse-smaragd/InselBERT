@@ -1,0 +1,34 @@
+{
+    "os": "macOS-13.5.1-arm64-arm-64bit",
+    "python": "3.11.4",
+    "heartbeatAt": "2023-10-24T07:16:47.754401",
+    "startedAt": "2023-10-24T07:16:47.205458",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/Users/daniel/Projects/Smaragd/sk-llm-01/src/fact_extraction_model/training/exec_training.py",
+    "codePath": "src/fact_extraction_model/training/exec_training.py",
+    "git": {
+        "remote": "https://github.com/innosuisse-smaragd/steinkamp-llm-e2e-01.git",
+        "commit": "6aea804431ee55956d73a02ac1bf4caab9ae1dad"
+    },
+    "email": null,
+    "root": "/Users/daniel/Projects/Smaragd/sk-llm-01",
+    "host": "client-189.net.belearn.swiss",
+    "username": "daniel",
+    "executable": "/Users/daniel/Projects/Smaragd/sk-llm-01/.venv/bin/python",
+    "cpu_count": 10,
+    "cpu_count_logical": 10,
+    "disk": {
+        "total": 3721.8717193603516,
+        "used": 8.867095947265625
+    },
+    "gpuapple": {
+        "type": "arm",
+        "vendor": "Apple"
+    },
+    "memory": {
+        "total": 64.0
+    }
+}

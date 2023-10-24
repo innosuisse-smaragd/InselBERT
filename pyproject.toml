@@ -36,3 +36,4 @@ run-bento-dev = {cmd = "bentoml serve service:svc --reload --working-dir ./src/r
 pretrain-tokenizer = {call = "src.tokenization.training.exec_training:pretrain_tokenizer"}
 evaluate-tokenizer = {call = "src.tokenization.evaluation.exec_evaluation:evaluate_tokenizer"}
 further-pretrain = {call = "src.further_pre_training.training.exec_training:further_pretrain_model"}
+finetune-model = "python src/fact_extraction_model/training/exec_training.py"

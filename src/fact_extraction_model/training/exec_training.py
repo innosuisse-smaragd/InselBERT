@@ -52,6 +52,11 @@ loader = CASLoader(constants.ANNOTATED_REPORTS_PATH)
 reports = loader.load_CAS_convert_to_offset_dict()
 dataset_unsplit = Dataset.from_list(reports)
 
+print(dataset_unsplit[0])
+print("Anchors: ",schema.id2label_anchors)
+print("Facts: ",schema.id2label_facts)
+print("Mofidiers: ",schema.id2label_modifiers)
+
 
 
 # split twice and combine
@@ -184,7 +189,8 @@ for token_id, token_labels, anchor_labels in zip(sample["input_ids"], sample["la
     labels = [schema.id2label_facts[label_index] for label_index, value in enumerate(token_labels) if value == 1]
 
     # Decode those indices into label name
-    print(f" {token_text:20} | {labels} | {anchor_labels}")
+    print(f" {token_text:20} | {labels}"
+          f" | {anchor_labels}")
 
     # Finish when we meet the end of sentence.
     if token_text == "</s>":
@@ -383,7 +389,7 @@ micro_metrics = []
 best_eval_loss = 100
 now = datetime.now()
 dt_string = now.strftime("%d%m%Y%H%M")
-path = os.path.join(constants.FINETUNED_MODEL_01_PATH, dt_string)
+path = os.path.join(constants.FINETUNED_MODEL_PATH, dt_string)
 for epoch in range(NUM_EPOCHS):
     train_loss = do_train(model, train_dl)
     eval_loss, eval_score, micro_metrics_batch, f1_anchors = do_eval(model, valid_dl)
