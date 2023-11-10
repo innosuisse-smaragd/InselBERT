@@ -7,3 +7,5 @@ FACT_SCHEMA_PATH="./data/test/fact_schema_v41.html"
 BASE_MODEL_NAME ="GerMedBERT/medbert-512"
 PRETRAINED_MODEL_PATH = "./serialized_models/medbert_512_pretrained/"
 FINETUNED_MODEL_PATH = "./serialized_models/inselBERT_extraction_finetuned/"
+
+FACT_EXTRACTION_MODEL_NAME = "fact_extraction_model"

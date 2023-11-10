@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 
+import bentoml.transformers
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -382,7 +383,6 @@ def save_micro_metrics(micro_metrics, model_dir, epoch):
         fhist.write("\n")
     fhist.close()
 
-
 history = []
 micro_metrics = []
 
@@ -417,6 +417,9 @@ for epoch in range(NUM_EPOCHS):
     save_training_history(history, path, epoch + 1)
     save_micro_metrics(micro_metrics, path, epoch + 1)
 
+bentoml.transformers.save_model(constants.FACT_EXTRACTION_MODEL_NAME, model, custom_objects={
+    "fact_schema": schema
+})
 
 def make_loss_diagram():
     plt.subplot(2, 1, 1)

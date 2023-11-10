@@ -1,0 +1,9 @@
+service: "service.py:svc"
+include:
+- "*.py"
+python:
+  packages:
+  - transformers
+  - torch
+  - numpy
+  - pandas
