@@ -3,44 +3,14 @@ import torch
 import shared.model_helpers as helper
 
 import fact_extraction_model.model.bert_two_heads as model_combined
-
+import shared.schema_generator
 
 tokenizer = helper.getTokenizer()
 device = helper.getDevice()
-id2label_anchors = {}
-label2id_anchors = {}
-tag2id_facts = {}
-id2label_facts = {}
-label2id_facts = {}
-num_labels = len(id2label_facts)
-
 model = helper.getPretrainedModel(model_combined)
 model = model.to(device)
-
-tag2id = {
-    "PER": 1,
-    "ORG": 2,
-    "LOC": 3,
-    "MISC": 4,
-    "NCHUNK": 5,
-    "TIME": 6,
-    "PLACE": 7,
-}
-id2tag = {v: k for k, v in tag2id.items()}
-
-
-label2id_facts = {
-    "O": 0,
-    **{f"B-{k}": 2 * v - 1 for k, v in tag2id.items()},
-    **{f"I-{k}": 2 * v for k, v in tag2id.items()},
-}
-
-id2label_facts = {v: k for k, v in label2id_facts.items()}
-
-label2id_anchors = label2id_facts
-id2label_anchors = id2label_facts
-tag2id_facts = tag2id
-
+schema = shared.schema_generator.SchemaGenerator()
+num_labels = NUM_LABELS_FACTS_ANCHORS = len(schema.label2id_anchors)
 
 # Multi-label inference
 def get_offsets_and_predicted_tags(example: str, model, tokenizer, threshold=0):
@@ -83,24 +53,24 @@ def get_tagged_groups(example: str, model, tokenizer):
     - List of spans under offset format {"start": ..., "end": ..., "tag": ...}, sorted by start, end then tag.
     """
     offsets_and_tags = get_offsets_and_predicted_tags(example, model, tokenizer)
-    predicted_offsets = {l: [] for l in tag2id_facts}
+    predicted_offsets = {l: [] for l in schema.tag2id_facts}
     last_token_tags = []
     for item in offsets_and_tags:
         (start, end), tags = item["offset"], item["tags"]
 
         for label_id in tags:
-            label = id2label_facts[label_id]
+            label = schema.id2label_facts[label_id]
             tag = label[2:]  # "I-PER" => "PER"
             if label.startswith("B-"):
                 predicted_offsets[tag].append({"start": start, "end": end})
             elif label.startswith("I-"):
                 # If "B-" and "I-" both appear in the same tag, ignore as we already processed it
-                if label2id_facts[f"B-{tag}"] in tags:
+                if schema.label2id_facts[f"B-{tag}"] in tags:
                     continue
 
                 if (
                     label_id not in last_token_tags
-                    and label2id_facts[f"B-{tag}"] not in last_token_tags
+                    and schema.label2id_facts[f"B-{tag}"] not in last_token_tags
                 ):
                     predicted_offsets[tag].append({"start": start, "end": end})
                 else:
@@ -121,13 +91,11 @@ def get_tagged_groups(example: str, model, tokenizer):
     return flatten_predicted_offsets
 
 
-example = "Du coup, la menace des feux de forêt est permanente, après les incendies dévastateurs de juillet dans le sud-ouest de la France, en Espagne, au Portugal ou en Grèce. Un important feu de forêt a éclaté le 24 juillet dans le parc national de la Suisse de Bohême, à la frontière entre la République tchèque et l'Allemagne, où des records de chaleur ont été battus (36,4C). Un millier d'hectares ont déjà été touchés. Lundi, les pompiers espéraient que l'incendie pourrait être maîtrisé en quelques jours."
+example = "MAMMOGRAFIE BEIDSEITS IN ZWEI EBENEN VOM 22.06.2021&#10;&#10;Fragestellung/Indikation&#10;Met. Adeno-Ca, unkl. Primarius. (CT-Befund vom 10.6.21 mit Vd. a. i.e.L. DD HCC, DD CCC.&#10;Positive Familienanamnese für Brustkrebs (Tante väterlicherseits).&#10;Malignität/Auffälligkeiten?&#10;&#10;Klinische Untersuchung und Ultraschall:&#10;Durchführung in der gynäkologischen Senologie dieser Klinik (Bericht siehe dort).&#10;&#10;Befund&#10;Zum Vergleich liegt die Voruntersuchung vom 28.09.2020 vor.&#10;&#10;Mammografie beidseits MLO und CC:&#10;Kutis und Subkutis unauffällig.&#10;Mittelfleckiges, teilweise involutiertes Drüsenparenchym beidseits.&#10;Kein malignomsuspekter Herdbefund. Keine suspekte Mikrokalkgruppe.&#10;&#10;Beurteilung&#10;Mammographisch kein Anhalt für Malignität beidseits.&#10;&#10;ACR-Typ b beidseits.&#10;BIRADS 1 beidseits.&#10;&#10;Falls auch der Ultraschallbefund der Brust unauffällig sein sollte, wäre eine weitere Befundabsicherung mittels MR Mammographie zu erwägen."
 print(example)
 print(get_tagged_groups(example, model, tokenizer))
 
-
 # Single-class inference
-
 
 def align_tokens_and_predicted_labels(toks_cpu, preds_cpu):
     aligned_toks, aligned_preds = [], []
@@ -138,12 +106,12 @@ def align_tokens_and_predicted_labels(toks_cpu, preds_cpu):
         else:
             if prev_tok is not None:
                 aligned_toks.append(prev_tok)
-                aligned_preds.append(id2label_anchors[prev_pred])
+                aligned_preds.append(schema.id2label_anchors[prev_pred])
             prev_tok = tok
             prev_pred = pred
     if prev_tok is not None:
         aligned_toks.append(prev_tok)
-        aligned_preds.append(id2label_anchors[prev_pred])
+        aligned_preds.append(schema.id2label_anchors[prev_pred])
     return aligned_toks, aligned_preds
 
 
@@ -168,7 +136,7 @@ def predict(texts):
 predicted_tokens, predicted_tags = predict(
     [
         [
-            "Du coup, la menace des feux de forêt est permanente, après les incendies dévastateurs de juillet dans le sud-ouest de la France, en Espagne, au Portugal ou en Grèce. Un important feu de forêt a éclaté le 24 juillet dans le parc national de la Suisse de Bohême, à la frontière entre la République tchèque et l'Allemagne, où des records de chaleur ont été battus (36,4C) . Un millier d'hectares ont déjà été touchés . Lundi, les pompiers espéraient que l'incendie pourrait être maîtrisé en quelques jours ."
+           example
         ],
     ]
 )
@@ -177,4 +145,5 @@ predicted_tokens, predicted_tags = predict(
 result = pd.DataFrame(
     [predicted_tokens[0], predicted_tags[0]], index=["tokens", "predicted_tags"]
 )
+result.to_csv("./result_anchors.csv")
 print(result)

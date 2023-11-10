@@ -25,6 +25,6 @@ def getModel(modelclass, num_labels):
 
 def getPretrainedModel(modelclass):
     model = modelclass.BertForFactAndAnchorClassification.from_pretrained(
-        constants.FINETUNED_MODEL_01_PATH,
+        constants.FINETUNED_MODEL_PATH,
     )
     return model
