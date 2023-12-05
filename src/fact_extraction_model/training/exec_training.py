@@ -228,7 +228,7 @@ test_dl = DataLoader(
 
 # Model instantiation
 device = helper.getDevice()
-model = helper.getModel(
+model = helper.getFurtherPretrainedModel(
     modelclass=model_combined,
     num_labels=NUM_LABELS_FACTS_ANCHORS
     # label2id=label2id,

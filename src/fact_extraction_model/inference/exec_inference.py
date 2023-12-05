@@ -7,13 +7,13 @@ import shared.schema_generator
 
 tokenizer = helper.getTokenizer()
 device = helper.getDevice()
-model = helper.getPretrainedModel(model_combined)
+model = helper.getFinetunedModel(model_combined)
 model = model.to(device)
 schema = shared.schema_generator.SchemaGenerator()
 num_labels = NUM_LABELS_FACTS_ANCHORS = len(schema.label2id_anchors)
 
 # Multi-label inference
-def get_offsets_and_predicted_tags(example: str, model, tokenizer, threshold=0):
+def get_offsets_and_predicted_tags(example: str, tokenizer, outputs, threshold=0):
     """
     Get prediction of model on example, using tokenizer
     Args:
@@ -26,11 +26,8 @@ def get_offsets_and_predicted_tags(example: str, model, tokenizer, threshold=0):
     """
     # Tokenize the sentence to retrieve the tokens and offset mappings
     raw_encoded_example = tokenizer(example, return_offsets_mapping=True)
-    encoded_example = tokenizer(example, return_tensors="pt").to(device)
 
-    # Call the model. The output LxK-tensor where L is the number of tokens, K is the number of classes
-    out = model(**encoded_example)["facts"]["logits"][0]
-
+    out = outputs["facts"]["logits"][0]
     # We assign to each token the classes whose logit is positive
     predicted_tags = [
         [i for i, l in enumerate(logit) if l > threshold] for logit in out
@@ -45,14 +42,49 @@ def get_offsets_and_predicted_tags(example: str, model, tokenizer, threshold=0):
         )
     ]
 
+# Single-class inference
 
-def get_tagged_groups(example: str, model, tokenizer):
+def align_tokens_and_predicted_labels(toks_cpu, preds_cpu):
+    aligned_toks, aligned_preds = [], []
+    prev_tok = None
+    for tok, pred in zip(toks_cpu, preds_cpu):
+        if tok.startswith("##") and prev_tok is not None:
+            prev_tok += tok[2:]
+        else:
+            if prev_tok is not None:
+                aligned_toks.append(prev_tok)
+                aligned_preds.append(schema.id2label_anchors[prev_pred])
+            prev_tok = tok
+            prev_pred = pred
+    if prev_tok is not None:
+        aligned_toks.append(prev_tok)
+        aligned_preds.append(schema.id2label_anchors[prev_pred])
+    return aligned_toks, aligned_preds
+
+
+def predict_anchors(tokenizer, tokenized_input, outputs):
+    aligned_tok_list, aligned_pred_list = [], []
+    tokens_cpu = tokenizer.convert_ids_to_tokens(tokenized_input.input_ids.view(-1))
+    preds_cpu = torch.argmax(outputs["anchors"].logits, dim=-1)[0].cpu().numpy()
+
+    aligned_toks, aligned_preds = align_tokens_and_predicted_labels(
+        tokens_cpu, preds_cpu
+    )
+
+    aligned_tok_list.append(aligned_toks)
+    aligned_pred_list.append(aligned_preds)
+
+    return aligned_tok_list, aligned_pred_list
+
+
+def predict_facts(example, tokenizer, outputs):
     """
     Get prediction of model on example, using tokenizer
     Returns:
     - List of spans under offset format {"start": ..., "end": ..., "tag": ...}, sorted by start, end then tag.
     """
-    offsets_and_tags = get_offsets_and_predicted_tags(example, model, tokenizer)
+    offsets_and_tags = get_offsets_and_predicted_tags(example, tokenizer, outputs)
+    print("Raw facts: ", offsets_and_tags)
     predicted_offsets = {l: [] for l in schema.tag2id_facts}
     last_token_tags = []
     for item in offsets_and_tags:
@@ -91,59 +123,31 @@ def get_tagged_groups(example: str, model, tokenizer):
     return flatten_predicted_offsets
 
 
-example = "MAMMOGRAFIE BEIDSEITS IN ZWEI EBENEN VOM 22.06.2021&#10;&#10;Fragestellung/Indikation&#10;Met. Adeno-Ca, unkl. Primarius. (CT-Befund vom 10.6.21 mit Vd. a. i.e.L. DD HCC, DD CCC.&#10;Positive Familienanamnese für Brustkrebs (Tante väterlicherseits).&#10;Malignität/Auffälligkeiten?&#10;&#10;Klinische Untersuchung und Ultraschall:&#10;Durchführung in der gynäkologischen Senologie dieser Klinik (Bericht siehe dort).&#10;&#10;Befund&#10;Zum Vergleich liegt die Voruntersuchung vom 28.09.2020 vor.&#10;&#10;Mammografie beidseits MLO und CC:&#10;Kutis und Subkutis unauffällig.&#10;Mittelfleckiges, teilweise involutiertes Drüsenparenchym beidseits.&#10;Kein malignomsuspekter Herdbefund. Keine suspekte Mikrokalkgruppe.&#10;&#10;Beurteilung&#10;Mammographisch kein Anhalt für Malignität beidseits.&#10;&#10;ACR-Typ b beidseits.&#10;BIRADS 1 beidseits.&#10;&#10;Falls auch der Ultraschallbefund der Brust unauffällig sein sollte, wäre eine weitere Befundabsicherung mittels MR Mammographie zu erwägen."
-print(example)
-print(get_tagged_groups(example, model, tokenizer))
+def predict_facts_and_anchors(example: str = "MAMMOGRAFIE BEIDSEITS IN ZWEI EBENEN VOM "
+                                             "22.06.2021&#10;&#10;Fragestellung/Indikation&#10;Met. Adeno-Ca, "
+                                             "unkl. Primarius. (CT-Befund vom 10.6.21 mit Vd. a. i.e.L. DD HCC, "
+                                             "DD CCC.&#10;Positive Familienanamnese für Brustkrebs (Tante "
+                                             "väterlicherseits).&#10;Malignität/Auffälligkeiten?&#10;&#10;Klinische "
+                                             "Untersuchung und Ultraschall:&#10;Durchführung in der gynäkologischen "
+                                             "Senologie dieser Klinik (Bericht siehe dort).&#10;&#10;Befund&#10;Zum "
+                                             "Vergleich liegt die Voruntersuchung vom 28.09.2020 "
+                                             "vor.&#10;&#10;Mammografie beidseits MLO und CC:&#10;Kutis und Subkutis "
+                                             "unauffällig.&#10;Mittelfleckiges, teilweise involutiertes "
+                                             "Drüsenparenchym beidseits.&#10;Kein malignomsuspekter Herdbefund. Keine "
+                                             "suspekte Mikrokalkgruppe.&#10;&#10;Beurteilung&#10;Mammographisch kein "
+                                             "Anhalt für Malignität beidseits.&#10;&#10;ACR-Typ b "
+                                             "beidseits.&#10;BIRADS 1 beidseits.&#10;&#10;Falls auch der "
+                                             "Ultraschallbefund der Brust unauffällig sein sollte, wäre eine weitere "
+                                             "Befundabsicherung mittels MR Mammographie zu erwägen."):
+    tokenized_input = tokenizer(example, return_tensors="pt").to(device)
+    outputs = model(**tokenized_input)
+    predicted_tokens, predicted_tags = predict_anchors(tokenizer, tokenized_input,outputs)
+    structured_anchors_dataframe = pd.DataFrame(
+        [predicted_tokens[0], predicted_tags[0]], index=["tokens", "predicted_tags"]
+    )
+    print("Anchors_dataframe: ", structured_anchors_dataframe)
+    structured_anchors_dataframe.to_csv("./result_anchors.csv")
 
-# Single-class inference
-
-def align_tokens_and_predicted_labels(toks_cpu, preds_cpu):
-    aligned_toks, aligned_preds = [], []
-    prev_tok = None
-    for tok, pred in zip(toks_cpu, preds_cpu):
-        if tok.startswith("##") and prev_tok is not None:
-            prev_tok += tok[2:]
-        else:
-            if prev_tok is not None:
-                aligned_toks.append(prev_tok)
-                aligned_preds.append(schema.id2label_anchors[prev_pred])
-            prev_tok = tok
-            prev_pred = pred
-    if prev_tok is not None:
-        aligned_toks.append(prev_tok)
-        aligned_preds.append(schema.id2label_anchors[prev_pred])
-    return aligned_toks, aligned_preds
-
-
-def predict(texts):
-    aligned_tok_list, aligned_pred_list = [], []
-    for text in texts:
-        inputs = tokenizer(text, return_tensors="pt").to(device)
-        outputs = model(**inputs)
-        tokens_cpu = tokenizer.convert_ids_to_tokens(inputs.input_ids.view(-1))
-        preds_cpu = torch.argmax(outputs["anchors"].logits, dim=-1)[0].cpu().numpy()
-
-        aligned_toks, aligned_preds = align_tokens_and_predicted_labels(
-            tokens_cpu, preds_cpu
-        )
-
-        aligned_tok_list.append(aligned_toks)
-        aligned_pred_list.append(aligned_preds)
-
-    return aligned_tok_list, aligned_pred_list
-
-
-predicted_tokens, predicted_tags = predict(
-    [
-        [
-           example
-        ],
-    ]
-)
-
-
-result = pd.DataFrame(
-    [predicted_tokens[0], predicted_tags[0]], index=["tokens", "predicted_tags"]
-)
-result.to_csv("./result_anchors.csv")
-print(result)
+    # Multi.label inference for facts:
+    structured_facts_output = predict_facts(example, tokenizer, outputs)
+    print("Facts output: ", structured_facts_output)

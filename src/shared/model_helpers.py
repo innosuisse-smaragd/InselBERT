@@ -11,8 +11,8 @@ def getDevice():
     return torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 
-def getModel(modelclass, num_labels):
-    config = BertConfig.from_pretrained(constants.BASE_MODEL_NAME)  # TODO: Adapt?
+def getFurtherPretrainedModel(modelclass, num_labels):
+    config = BertConfig.from_pretrained(constants.PRETRAINED_MODEL_PATH)  # TODO: Adapt?
 
     model = modelclass.BertForFactAndAnchorClassification.from_pretrained(
         constants.BASE_MODEL_NAME,
@@ -23,8 +23,9 @@ def getModel(modelclass, num_labels):
     return model
 
 
-def getPretrainedModel(modelclass):
+def getFinetunedModel(modelclass):
     model = modelclass.BertForFactAndAnchorClassification.from_pretrained(
         constants.FINETUNED_MODEL_PATH,
     )
     return model
+
