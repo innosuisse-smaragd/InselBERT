@@ -63,18 +63,13 @@ def align_tokens_and_predicted_labels(toks_cpu, preds_cpu):
 
 
 def predict_anchors(tokenizer, tokenized_input, outputs):
-    aligned_tok_list, aligned_pred_list = [], []
     tokens_cpu = tokenizer.convert_ids_to_tokens(tokenized_input.input_ids.view(-1))
     preds_cpu = torch.argmax(outputs["anchors"].logits, dim=-1)[0].cpu().numpy()
 
     aligned_toks, aligned_preds = align_tokens_and_predicted_labels(
         tokens_cpu, preds_cpu
     )
-
-    aligned_tok_list.append(aligned_toks)
-    aligned_pred_list.append(aligned_preds)
-
-    return aligned_tok_list, aligned_pred_list
+    return aligned_toks, aligned_preds
 
 
 def predict_facts(example, tokenizer, outputs):
@@ -143,7 +138,7 @@ def predict_facts_and_anchors(example: str = "MAMMOGRAFIE BEIDSEITS IN ZWEI EBEN
     outputs = model(**tokenized_input)
     predicted_tokens, predicted_tags = predict_anchors(tokenizer, tokenized_input,outputs)
     structured_anchors_dataframe = pd.DataFrame(
-        [predicted_tokens[0], predicted_tags[0]], index=["tokens", "predicted_tags"]
+        [predicted_tokens, predicted_tags], index=["tokens", "predicted_tags"]
     )
     print("Anchors_dataframe: ", structured_anchors_dataframe)
     structured_anchors_dataframe.to_csv("./result_anchors.csv")
