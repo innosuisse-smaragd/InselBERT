@@ -2,23 +2,20 @@ import bentoml
 import pandas as pd
 import torch
 
-import constants
-import shared.model_helpers as helper
-
-model_ref = bentoml.models.get(constants.FACT_EXTRACTION_MODEL_NAME + ":latest")
+model_ref = bentoml.models.get("fact_extraction_model:latest")
 
 
 class FactExtractionRunnable(bentoml.Runnable):
+
     SUPPORTED_RESOURCES = ("cpu",)
     SUPPORTS_CPU_MULTI_THREADING = False
-
-    tokenizer = helper.getTokenizer()
     device = "cpu"
 
     def __init__(self):
         self.model = bentoml.transformers.load_model(model_ref)
         self.schema = model_ref.custom_objects.get("fact_schema")
         self.num_labels = len(self.schema.label2id_anchors)
+        self.tokenizer = model_ref.custom_objects.get("tokenizer")
 
     @staticmethod
     def get_offsets_and_predicted_tags(example: str, tokenizer, outputs, threshold=0):
@@ -152,16 +149,21 @@ class FactExtractionRunnable(bentoml.Runnable):
         merged_dataframe = pd.concat([structured_anchors_dataframe, facts_dataframe])
         if extracted_fact_tokens != predicted_anchor_tokens:
             raise Exception("Anchor and fact tokens do not match!")
-        return merged_dataframe
+        merged_dataframe.drop(index="tokens_anchors", inplace=True)
+        merged_dataframe_dict = merged_dataframe.to_dict(orient="dict")
+        return merged_dataframe_dict
+
 
 
 fact_extraction_runner = bentoml.Runner(FactExtractionRunnable, name="fact_extraction_runner", models=[model_ref])
-svc = bentoml.Service("extract_bert", runners=[fact_extraction_runner])
+svc = bentoml.Service("fact_extraction_model", runners=[fact_extraction_runner])
 
 
-@svc.api(input=bentoml.io.Text(), output=bentoml.io.PandasDataFrame())
+@svc.api(input=bentoml.io.Text(), output=bentoml.io.JSON())
 async def extract_facts_and_anchors(inp: str):
-    return await fact_extraction_runner.predict_facts_and_anchors.async_run(inp)
+        prediction = await fact_extraction_runner.predict_facts_and_anchors.async_run(inp)
+        return {"predictions": prediction,
+                "input": inp}
 
 if __name__ == "__main__":
     example = "MAMMOGRAFIE BEIDSEITS IN ZWEI EBENEN VOM 22.06.2021&#10;&#10;Fragestellung/Indikation&#10;Met. Adeno-Ca, unkl. Primarius. (CT-Befund vom 10.6.21 mit Vd. a. i.e.L. DD HCC, DD CCC.&#10;Positive Familienanamnese für Brustkrebs (Tante väterlicherseits).&#10;Malignität/Auffälligkeiten?&#10;&#10;Klinische Untersuchung und Ultraschall:&#10;Durchführung in der gynäkologischen Senologie dieser Klinik (Bericht siehe dort).&#10;&#10;Befund&#10;Zum Vergleich liegt die Voruntersuchung vom 28.09.2020 vor.&#10;&#10;Mammografie beidseits MLO und CC:&#10;Kutis und Subkutis unauffällig.&#10;Mittelfleckiges, teilweise involutiertes Drüsenparenchym beidseits.&#10;Kein malignomsuspekter Herdbefund. Keine suspekte Mikrokalkgruppe.&#10;&#10;Beurteilung&#10;Mammographisch kein Anhalt für Malignität beidseits.&#10;&#10;ACR-Typ b beidseits.&#10;BIRADS 1 beidseits.&#10;&#10;Falls auch der Ultraschallbefund der Brust unauffällig sein sollte, wäre eine weitere Befundabsicherung mittels MR Mammographie zu erwägen."

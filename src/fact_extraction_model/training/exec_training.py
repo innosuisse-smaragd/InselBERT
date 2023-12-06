@@ -389,7 +389,8 @@ micro_metrics = []
 best_eval_loss = 100
 now = datetime.now()
 dt_string = now.strftime("%d%m%Y%H%M")
-path = os.path.join(constants.FINETUNED_MODEL_PATH, dt_string)
+folder_string = constants.FINETUNED_MODEL_PATH + "_" + dt_string
+path = os.path.join(constants.FINETUNED_MODEL_PATH, folder_string)
 for epoch in range(NUM_EPOCHS):
     train_loss = do_train(model, train_dl)
     eval_loss, eval_score, micro_metrics_batch, f1_anchors = do_eval(model, valid_dl)
@@ -418,7 +419,8 @@ for epoch in range(NUM_EPOCHS):
     save_micro_metrics(micro_metrics, path, epoch + 1)
 
 bentoml.transformers.save_model(constants.FACT_EXTRACTION_MODEL_NAME, model, custom_objects={
-    "fact_schema": schema
+    "fact_schema": schema,
+    "tokenizer": tokenizer
 })
 
 def make_loss_diagram():
