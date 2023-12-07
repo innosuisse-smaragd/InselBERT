@@ -358,11 +358,6 @@ def do_eval(model, eval_dl):
 
     return eval_loss, eval_score, micro_metrics, f1_anchors
 
-
-def save_checkpoint(model, model_dir, epoch):
-    model.save_pretrained(os.path.join(model_dir, "ckpt"))
-
-
 def save_training_history(history, model_dir, epoch):
     fhist = open(os.path.join(model_dir, "history.tsv"), "w")
     for epoch, train_loss, eval_loss, eval_score in history:
@@ -389,8 +384,8 @@ micro_metrics = []
 best_eval_loss = 100
 now = datetime.now()
 dt_string = now.strftime("%d%m%Y%H%M")
-folder_string = constants.FINETUNED_MODEL_PATH + "_" + dt_string
-path = os.path.join(constants.FINETUNED_MODEL_PATH, folder_string)
+folder_string = constants.F_A_EXTRACTION_MODEL_NAME + "_" + dt_string
+path = os.path.join(constants.F_A_EXTRACTION_MODEL_PATH, folder_string)
 for epoch in range(NUM_EPOCHS):
     train_loss = do_train(model, train_dl)
     eval_loss, eval_score, micro_metrics_batch, f1_anchors = do_eval(model, valid_dl)
@@ -413,12 +408,12 @@ for epoch in range(NUM_EPOCHS):
         wandb.log({key: value})
     if eval_loss < best_eval_loss:
         best_eval_loss = eval_loss
-        save_checkpoint(model, path, epoch + 1)
+        model.save_pretrained(path)
         print("Model saved as current eval_loss is: ", best_eval_loss)
     save_training_history(history, path, epoch + 1)
     save_micro_metrics(micro_metrics, path, epoch + 1)
 
-bentoml.transformers.save_model(constants.FACT_EXTRACTION_MODEL_NAME, model, custom_objects={
+bentoml.transformers.save_model(constants.F_A_EXTRACTION_MODEL_NAME, model, custom_objects={
     "fact_schema": schema,
     "tokenizer": tokenizer
 })

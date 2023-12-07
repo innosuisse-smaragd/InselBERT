@@ -32,10 +32,10 @@ lint = {cmd = "pycodestyle ./src ./test --max-line-length 120"}
 check-import-order = {cmd = "isort ./src ./test --check-only"}
 fix-import-order = {cmd = "isort ./src ./test"}
 
-run-bento-dev = {cmd = "bentoml serve service:svc --reload --working-dir ./src/refinement_model/inference"}
-build-bento = {cmd = "bentoml build ./src/refinement_model/inference -f ./src/refinement_model/inference/bentofile.yaml"}
-run-bento = {cmd = "bentoml serve fact_extraction_model:latest"}
-containerize-bento = {cmd = "bentoml containerize --opt platform=linux/amd64 fact_extraction_model:latest"}
+run-bento-dev = {cmd = "bentoml serve service:svc --reload"}
+build-bento = {cmd = "bentoml build ./src/"}
+run-bento = {cmd = "bentoml serve inselbert_extract_f_a:latest"}
+containerize-bento = {cmd = "bentoml containerize --opt platform=linux/amd64 inselbert_extract_f_a:latest"}
 
 pretrain-tokenizer = {call = "src.tokenization.training.exec_training:pretrain_tokenizer"}
 evaluate-tokenizer = {call = "src.tokenization.evaluation.exec_evaluation:evaluate_tokenizer"}

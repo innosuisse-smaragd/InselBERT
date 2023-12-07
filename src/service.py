@@ -2,7 +2,7 @@ import bentoml
 import pandas as pd
 import torch
 
-model_ref = bentoml.models.get("fact_extraction_model:latest")
+model_ref = bentoml.models.get("inselbert_extract_f_a:latest")
 
 
 class FactExtractionRunnable(bentoml.Runnable):
@@ -154,9 +154,8 @@ class FactExtractionRunnable(bentoml.Runnable):
         return merged_dataframe_dict
 
 
-
-fact_extraction_runner = bentoml.Runner(FactExtractionRunnable, name="fact_extraction_runner", models=[model_ref])
-svc = bentoml.Service("fact_extraction_model", runners=[fact_extraction_runner])
+fact_extraction_runner = bentoml.Runner(FactExtractionRunnable, name="f_a_extraction_runner", models=[model_ref])
+svc = bentoml.Service("inselbert_extract_f_a", runners=[fact_extraction_runner])
 
 
 @svc.api(input=bentoml.io.Text(), output=bentoml.io.JSON())

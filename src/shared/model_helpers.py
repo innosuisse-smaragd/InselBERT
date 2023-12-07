@@ -25,7 +25,7 @@ def getFurtherPretrainedModel(modelclass, num_labels):
 
 def getFinetunedModel(modelclass):
     model = modelclass.BertForFactAndAnchorClassification.from_pretrained(
-        constants.FINETUNED_MODEL_PATH,
+        constants.F_A_EXTRACTION_MODEL_PATH,
     )
     return model
 
