@@ -26,6 +26,11 @@ class SchemaGenerator:
         self.id2label_facts = self.inverse_2id(self.label2id_facts)
         self.id2label_anchors = self.inverse_2id(self.label2id_anchors)
         self.id2label_modifiers = self.inverse_2id(self.label2id_modifiers)
+
+        print("Anchors: ", self.id2label_anchors)
+        print("Facts: ", self.id2label_facts)
+        print("Modifiers: ", self.id2label_modifiers)
+
     @staticmethod
     def get_tag2id(entity):
         tag_names = []

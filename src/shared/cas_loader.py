@@ -1,12 +1,26 @@
 import os
 from pathlib import Path
 
-from shared.dataset_entry import Dataset_Entry
-
 from smaragd_shared_python.annotation.document import Document
 from smaragd_shared_python.annotation.document_parser import DocumentParser
 from smaragd_shared_python.annotation.uima_util import UIMAUtil
 from constants import ANNOTATED_REPORTS_PATH
+
+
+class DatasetEntry:
+    def __init__(
+        self,
+        id: str,
+        fact_tags: list[list[str]],
+        anchor_tags: list[list[str]],
+        modifier_tags: list[list[str]],
+        tokens: list[str],
+    ):
+        self.id = id
+        self.fact_tags = fact_tags
+        self.anchor_tags = anchor_tags
+        self.modifier_tags = modifier_tags
+        self.tokens = tokens
 
 
 class CASLoader:
@@ -23,9 +37,9 @@ class CASLoader:
             documents.append(document)
         return documents
 
-    def load_cas_and_convert_to_dict_list(self) -> list[Dataset_Entry]:
+    def load_cas_and_convert_to_dict_list(self) -> list[DatasetEntry]:
         documents = self.load_cas_from_directory()
-        dictlist = [Dataset_Entry]
+        dictlist = [DatasetEntry]
         for doc in documents:
             tokens = doc.tokens
             fact_tags = []
@@ -62,7 +76,7 @@ class CASLoader:
                 text = doc.get_covered_text(token)
                 token_texts.append(text)
 
-            entry = Dataset_Entry(
+            entry = DatasetEntry(
                 doc.document_meta_data.document_id,
                 fact_tags,
                 anchor_tags,
