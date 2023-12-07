@@ -162,7 +162,7 @@ cython_debug/
 
 /data/protected/
 
-/wandb/
+wandb/
 
 /serialized_models/
 
