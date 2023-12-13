@@ -67,7 +67,7 @@ hf_dataset = DatasetDict(
 tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_PATH)
 
 
-def tokenize_and_align_labels(examples):
+def tokenize_and_adjust_labels(examples):
     tokenized_inputs = tokenizer(
         examples["tokens"], truncation=True, is_split_into_words=True
     )
@@ -97,7 +97,7 @@ def tokenize_and_align_labels(examples):
 
 # apply tokenization to whole dataset
 encoded_hf_dataset = hf_dataset.map(
-    tokenize_and_align_labels, batched=True, remove_columns=["ner_tags", "tokens", "id"]
+    tokenize_and_adjust_labels, batched=True, remove_columns=["ner_tags", "tokens", "id"]
 )
 
 collate_fn = DataCollatorForTokenClassification(

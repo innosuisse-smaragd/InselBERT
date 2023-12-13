@@ -12,12 +12,15 @@ import torch
 
 class ModelHelper:
 
-    def __init__(self, model_def, num_labels, schema):
+    def __init__(self, model_def, num_labels, schema, modeltype):
         self.tokenizer = self.get_tokenizer()
         self.device = self.get_device()
         self.model_def = model_def
         self.num_labels = num_labels
-        self.model = self.get_further_pretrained_model()
+        if modeltype == constants.F_A_EXTRACTION_MODEL_NAME:
+            self.model = self.get_further_pretrained_model_for_f_a_extraction()
+        elif modeltype == constants.M_EXTRACTION_MODEL_NAME:
+            self.model = self.get_further_pretrained_model_for_modifier_extraction()
         self.model.to(self.device)
         self.schema = schema
 
@@ -30,22 +33,29 @@ class ModelHelper:
     def get_device():
         return torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
-    def get_further_pretrained_model(self):
+    def get_further_pretrained_model_for_f_a_extraction(self):
         config = BertConfig.from_pretrained(constants.PRETRAINED_MODEL_PATH)  # TODO: Adapt?
 
         model = self.model_def.BertForFactAndAnchorClassification.from_pretrained(
-            constants.BASE_MODEL_NAME,
+            constants.PRETRAINED_MODEL_PATH,
             num_labels=self.num_labels
            # label2id=label2id,
            # id2label=id2label,  # TODO: add other mappings- but how?
         )
         return model
 
-    def get_finetuned_model(self):
-        model = self.model_def.BertForFactAndAnchorClassification.from_pretrained(
-            constants.F_A_EXTRACTION_MODEL_PATH,
+
+    def get_further_pretrained_model_for_modifier_extraction(self):
+        config = BertConfig.from_pretrained(constants.PRETRAINED_MODEL_PATH)  # TODO: Adapt?
+
+        model = self.model_def.BertForTokenClassificationRefinement.from_pretrained(
+            constants.PRETRAINED_MODEL_PATH,
+            num_labels=self.num_labels
+           # label2id=label2id,
+           # id2label=id2label,  # TODO: add other mappings- but how?
         )
         return model
+
 
     # Metrics for single class
     def align_predictions(self,labels_cpu, preds_cpu):
