@@ -5,7 +5,8 @@ from smaragd_shared_python.annotation.document import Document
 from smaragd_shared_python.annotation.document_parser import DocumentParser
 from smaragd_shared_python.annotation.uima_util import UIMAUtil
 from constants import ANNOTATED_REPORTS_PATH
-
+import numpy
+import pandas
 
 class DatasetEntry:
     def __init__(
@@ -147,7 +148,7 @@ class CASLoader:
     def load_CAS_convert_to_offset_dict_refinement(self):
         dictlist = self.load_cas_and_convert_to_dict_list()
         extracted_spans = [] #contains list of tuples of fact type and spans
-        for doc in dictlist:
+        for index, doc in enumerate(dictlist):
             span_prototypes = {}
             # loop over fact tags and sub lists of tokens and tags
             for i, fact_tags in enumerate(doc["fact_tags"]):
@@ -158,7 +159,21 @@ class CASLoader:
                     token = doc["text"][i]
                     anchors = doc["anchor_tags"][i]
                     modifiers = doc["modifier_tags"][i]
-                    if tag.startswith("B-"): # create new entry in extracted_spans
+                    if tag.startswith("B-"): # create new entry in extracted_spans # TODO: What happens when the same or other fact type starts parallel or right after?
+
+                        if fact_type in span_prototypes.keys(): # there is already a prototype for this fact type
+                            # complete previous prototype
+                            span_prototypes[fact_type]["tokens"].extend(trailing_tokens)
+                            span_prototypes[fact_type]["anchor"].extend([None] * len(trailing_tokens))
+                            span_prototypes[fact_type]["modifiers"].extend([None] * len(trailing_tokens))
+                            span_prototypes[fact_type]["isStart"][-1] = True
+                            span_prototypes[fact_type]["isStart"].extend([False] * len(trailing_tokens))
+                            span_prototypes[fact_type]["isEnd"][-1] = False
+                            span_prototypes[fact_type]["isEnd"].extend([False] * len(trailing_tokens))
+                            # add to extracted spans and remove from prototypes
+                            dataframe = pandas.DataFrame.from_dict(span_prototypes[fact_type], orient="index")
+                            extracted_spans.append([fact_type, dataframe, doc["id"], doc["text"]])
+                            span_prototypes.pop(fact_type)
                         # add token, as well as anchor and modifier tag lists to prototype
                         merged_tokens = [token]
                         merged_tokens[:0] = leading_tokens
@@ -166,31 +181,46 @@ class CASLoader:
                         merged_anchors[:0] = [None] * len(leading_tokens)
                         merged_modifiers = [modifiers]
                         merged_modifiers[:0] = [None] * len(leading_tokens)
-                        span_prototypes[fact_type] = {"tokens": merged_tokens, "anchor": merged_anchors, "modifiers": merged_modifiers}
+                        isStart = [True]
+                        isStart[:0] = [False] * len(leading_tokens)
+                        isEnd = [False]
+                        isEnd[:0] = [False] * len(leading_tokens)
+                        span_prototypes[fact_type] = {"tokens": merged_tokens, "anchor": merged_anchors, "modifiers": merged_modifiers, "isStart": isStart, "isEnd": isEnd}
                     elif tag.startswith("I-"):
                         # there must be already a fact prototype -> add token, anchors and modifiers
                         span_prototypes[fact_type]["tokens"].append(token)
                         span_prototypes[fact_type]["anchor"].append(anchors)
                         span_prototypes[fact_type]["modifiers"].append(modifiers)
+                        span_prototypes[fact_type]["isStart"].append(False)
+                        span_prototypes[fact_type]["isEnd"].append(False)
 
                 if len(fact_tags) == 0 and span_prototypes != {}:
-                    # no fact tags -> complete prototype, add to extracted spans and remove from prototypes
-
-                    span_prototypes[fact_type]["tokens"].extend(trailing_tokens)
-                    span_prototypes[fact_type]["anchor"].extend([None] * len(trailing_tokens))
-                    span_prototypes[fact_type]["modifiers"].extend([None] * len(trailing_tokens))
+                    # no fact tags -> complete all prototypes, add to extracted spans and remove from prototypes
                     for fact_type, prototype in span_prototypes.items():
-                        extracted_spans.append([fact_type, prototype])
+
+                        prototype["tokens"].extend(trailing_tokens)
+                        prototype["anchor"].extend([None] * len(trailing_tokens))
+                        prototype["modifiers"].extend([None] * len(trailing_tokens))
+                        prototype["isStart"].extend([False] * len(trailing_tokens))
+                        prototype["isEnd"][-1] = True
+                        prototype["isEnd"].extend([False] * len(trailing_tokens))
+
+                        dataframe = pandas.DataFrame.from_dict(prototype, orient="index")
+                        extracted_spans.append([fact_type, dataframe, doc["id"], doc["text"]])
                     span_prototypes = {}
+
 
             if len(span_prototypes) > 0:
                 # end of document -> add prototypes to extracted spans
 
-                span_prototypes[fact_type]["tokens"].extend(trailing_tokens)
-                span_prototypes[fact_type]["anchor"].extend([None] * len(trailing_tokens))
-                span_prototypes[fact_type]["modifiers"].extend([None] * len(trailing_tokens))
+                #span_prototypes[fact_type]["tokens"].extend(trailing_tokens)
+                #span_prototypes[fact_type]["anchor"].extend([None] * len(trailing_tokens))
+                #span_prototypes[fact_type]["modifiers"].extend([None] * len(trailing_tokens))
                 for fact_type, prototype in span_prototypes.items():
-                    extracted_spans.append([fact_type, prototype])
+
+                    prototype["isEnd"][-1] = True
+                    dataframe = pandas.DataFrame.from_dict(prototype, orient="index")
+                    extracted_spans.append([fact_type, dataframe, doc["id"], doc["text"]])
 
 
         return extracted_spans
