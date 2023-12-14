@@ -165,8 +165,8 @@ class CASLoader:
                             span_prototypes[fact_type]["isEnd"][-1] = False
                             span_prototypes[fact_type]["isEnd"].extend([False] * len(trailing_tokens))
                             # add to extracted spans and remove from prototypes
-                            dataframe = pandas.DataFrame.from_dict(span_prototypes[fact_type], orient="index")
-                            extracted_spans.append([fact_type, dataframe, doc["id"], doc["text"]])
+
+                            extracted_spans.append([fact_type,prototype, doc["id"], doc["text"]])
                             span_prototypes.pop(fact_type)
                         # add token, as well as anchor and modifier tag lists to prototype
                         merged_tokens = [token]
@@ -199,8 +199,8 @@ class CASLoader:
                         prototype["isEnd"][-1] = True
                         prototype["isEnd"].extend([False] * len(trailing_tokens))
 
-                        dataframe = pandas.DataFrame.from_dict(prototype, orient="index")
-                        extracted_spans.append([fact_type, dataframe, doc["id"], doc["text"]])
+
+                        extracted_spans.append([fact_type, prototype, doc["id"], doc["text"]])
                     span_prototypes = {}
 
             if len(span_prototypes) > 0:
@@ -211,7 +211,6 @@ class CASLoader:
                 # span_prototypes[fact_type]["modifiers"].extend([None] * len(trailing_tokens))
                 for fact_type, prototype in span_prototypes.items():
                     prototype["isEnd"][-1] = True
-                    dataframe = pandas.DataFrame.from_dict(prototype, orient="index")
-                    extracted_spans.append([fact_type, dataframe, doc["id"], doc["text"]])
+                    extracted_spans.append([fact_type, prototype, doc["id"], doc["text"]])
 
         return extracted_spans

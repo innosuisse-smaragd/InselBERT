@@ -37,9 +37,14 @@ model_helper = ModelHelper(model_rf, NUM_LABELS_FACTS_ANCHORS, schema, constants
 #reports = loader.load_json(constants.F_A_EXTRACTION_MODEL_OUTPUT_PATH)
 
 loader = CASLoader(constants.ANNOTATED_REPORTS_PATH)
-reports = loader.load_CAS_convert_to_offset_dict_refinement()
+extracted_facts_with_metadata = loader.load_CAS_convert_to_offset_dict_refinement()
 
-dataset = Dataset.from_list(reports)
+dictlist = []
+
+for entry in extracted_facts_with_metadata:
+    dictlist.append(entry[1])
+
+dataset = Dataset.from_list(dictlist)
 
 dataset_helper = DatasetHelper(dataset, batch_size=BATCH_SIZE, tokenizer=model_helper.tokenizer)
 
