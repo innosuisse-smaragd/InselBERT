@@ -5,17 +5,17 @@ from smaragd_shared_python.annotation.document import Document
 from smaragd_shared_python.annotation.document_parser import DocumentParser
 from smaragd_shared_python.annotation.uima_util import UIMAUtil
 from constants import ANNOTATED_REPORTS_PATH
-import numpy
 import pandas
+
 
 class DatasetEntry:
     def __init__(
-        self,
-        id: str,
-        fact_tags: list[list[str]],
-        anchor_tags: list[list[str]],
-        modifier_tags: list[list[str]],
-        tokens: list[str],
+            self,
+            id: str,
+            fact_tags: list[list[str]],
+            anchor_tags: list[list[str]],
+            modifier_tags: list[list[str]],
+            tokens: list[str],
     ):
         self.id = id
         self.fact_tags = fact_tags
@@ -32,7 +32,6 @@ class CASLoader:
         files = os.listdir(self.cas_directory)
         documents = []
         for cas_file in files:
-            # jonas adds decryption in load_smaragd_cas()
             cas = UIMAUtil.load_smaragd_cas(Path(ANNOTATED_REPORTS_PATH, cas_file))
             document = DocumentParser.parse_smaragd_cas(cas)
             documents.append(document)
@@ -40,7 +39,7 @@ class CASLoader:
 
     def load_cas_and_convert_to_dict_list(self) -> list[dict]:
         documents = self.load_cas_from_directory()
-        dictlist = []  # Initialize as an empty list
+        dictlist = []
         for doc in documents:
             tokens = doc.tokens
             fact_tags = []
@@ -76,7 +75,6 @@ class CASLoader:
                             annotation_tags.append("B-" + value)
                         prev_annotations[annoclass].append(value)
 
-
                     if annoclass == "FACT":
                         fact_tags.append(annotation_tags)
                     elif annoclass == "ANCHOR_ENTITY":
@@ -92,17 +90,15 @@ class CASLoader:
                 text = doc.get_covered_text(token)
                 token_texts.append(text)
 
-
             entry = {
-                "id" : doc.document_meta_data.document_id,
+                "id": doc.document_meta_data.document_id,
                 "fact_tags": fact_tags,
-                "anchor_tags":  anchor_tags,
+                "anchor_tags": anchor_tags,
                 "modifier_tags": modifier_tags,
-                "text":  token_texts,
+                "text": token_texts,
             }
             dictlist.append(entry)
         return dictlist
-
 
     def load_CAS_convert_to_offset_dict(self) -> list[dict]:
         documents = self.load_cas_from_directory()
@@ -144,24 +140,22 @@ class CASLoader:
             dictlist.append(entry)
         return dictlist
 
-    # TODO: Add start and end labels and modifier sorting (depending on fact type)
     def load_CAS_convert_to_offset_dict_refinement(self):
         dictlist = self.load_cas_and_convert_to_dict_list()
-        extracted_spans = [] #contains list of tuples of fact type and spans
+        extracted_spans = []  # contains list of tuples of fact type and spans
         for index, doc in enumerate(dictlist):
             span_prototypes = {}
             # loop over fact tags and sub lists of tokens and tags
             for i, fact_tags in enumerate(doc["fact_tags"]):
-                leading_tokens = doc["text"][i-20:i]
+                leading_tokens = doc["text"][i - 20:i]
                 trailing_tokens = doc["text"][i:i + 20]
                 for j, tag in enumerate(fact_tags):
                     fact_type = tag[2:]
                     token = doc["text"][i]
                     anchors = doc["anchor_tags"][i]
                     modifiers = doc["modifier_tags"][i]
-                    if tag.startswith("B-"): # create new entry in extracted_spans # TODO: What happens when the same or other fact type starts parallel or right after?
-
-                        if fact_type in span_prototypes.keys(): # there is already a prototype for this fact type
+                    if tag.startswith("B-"):  # new fact type
+                        if fact_type in span_prototypes.keys():  # there is already a prototype for this fact type
                             # complete previous prototype
                             span_prototypes[fact_type]["tokens"].extend(trailing_tokens)
                             span_prototypes[fact_type]["anchor"].extend([None] * len(trailing_tokens))
@@ -185,7 +179,8 @@ class CASLoader:
                         isStart[:0] = [False] * len(leading_tokens)
                         isEnd = [False]
                         isEnd[:0] = [False] * len(leading_tokens)
-                        span_prototypes[fact_type] = {"tokens": merged_tokens, "anchor": merged_anchors, "modifiers": merged_modifiers, "isStart": isStart, "isEnd": isEnd}
+                        span_prototypes[fact_type] = {"tokens": merged_tokens, "anchor": merged_anchors,
+                                                      "modifiers": merged_modifiers, "isStart": isStart, "isEnd": isEnd}
                     elif tag.startswith("I-"):
                         # there must be already a fact prototype -> add token, anchors and modifiers
                         span_prototypes[fact_type]["tokens"].append(token)
@@ -197,7 +192,6 @@ class CASLoader:
                 if len(fact_tags) == 0 and span_prototypes != {}:
                     # no fact tags -> complete all prototypes, add to extracted spans and remove from prototypes
                     for fact_type, prototype in span_prototypes.items():
-
                         prototype["tokens"].extend(trailing_tokens)
                         prototype["anchor"].extend([None] * len(trailing_tokens))
                         prototype["modifiers"].extend([None] * len(trailing_tokens))
@@ -209,18 +203,15 @@ class CASLoader:
                         extracted_spans.append([fact_type, dataframe, doc["id"], doc["text"]])
                     span_prototypes = {}
 
-
             if len(span_prototypes) > 0:
                 # end of document -> add prototypes to extracted spans
 
-                #span_prototypes[fact_type]["tokens"].extend(trailing_tokens)
-                #span_prototypes[fact_type]["anchor"].extend([None] * len(trailing_tokens))
-                #span_prototypes[fact_type]["modifiers"].extend([None] * len(trailing_tokens))
+                # span_prototypes[fact_type]["tokens"].extend(trailing_tokens)
+                # span_prototypes[fact_type]["anchor"].extend([None] * len(trailing_tokens))
+                # span_prototypes[fact_type]["modifiers"].extend([None] * len(trailing_tokens))
                 for fact_type, prototype in span_prototypes.items():
-
                     prototype["isEnd"][-1] = True
                     dataframe = pandas.DataFrame.from_dict(prototype, orient="index")
                     extracted_spans.append([fact_type, dataframe, doc["id"], doc["text"]])
-
 
         return extracted_spans
