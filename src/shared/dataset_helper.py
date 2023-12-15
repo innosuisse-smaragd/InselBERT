@@ -34,5 +34,5 @@ class DatasetHelper:
     def load_tokenized_dataset(self, tokenized_dataset, shuffle=False):
         return DataLoader(tokenized_dataset, batch_size=self.batch_size, shuffle=shuffle, collate_fn=self.data_collator)
 
-    def apply_tokenization(self, tokenizer_function):
-        return self.dataset.map(tokenizer_function, remove_columns=self.dataset["train"].column_names)
+    def apply_tokenization(self, tokenizer_function, batched=False):
+        return self.dataset.map(tokenizer_function, remove_columns=self.dataset["train"].column_names, batched=batched)

@@ -25,8 +25,9 @@ class DatasetEntry:
 
 
 class CASLoader:
-    def __init__(self, cas_directory: str):
+    def __init__(self, cas_directory: str, schema):
         self.cas_directory = cas_directory
+        self.schema = schema
 
     def load_cas_from_directory(self) -> list[Document]:
         files = os.listdir(self.cas_directory)
@@ -149,21 +150,30 @@ class CASLoader:
             for i, fact_tags in enumerate(doc["fact_tags"]):
                 leading_tokens = doc["text"][i - 20:i]
                 trailing_tokens = doc["text"][i:i + 20]
+                trailing_padding = [0] * len(trailing_tokens)
                 for j, tag in enumerate(fact_tags):
                     fact_type = tag[2:]
                     token = doc["text"][i]
                     anchors = doc["anchor_tags"][i]
+                    if len(anchors) == 0:
+                        anchors = 0
+                    else:
+                        anchors = self.schema.label2id_anchors[anchors[0]]
                     modifiers = doc["modifier_tags"][i]
+                    if len(modifiers) == 0:
+                        modifiers = 0
+                    else:
+                        modifiers = self.schema.label2id_modifiers[modifiers[0]]
                     if tag.startswith("B-"):  # new fact type
                         if fact_type in span_prototypes.keys():  # there is already a prototype for this fact type
                             # complete previous prototype
                             span_prototypes[fact_type]["tokens"].extend(trailing_tokens)
-                            span_prototypes[fact_type]["anchor"].extend([None] * len(trailing_tokens))
-                            span_prototypes[fact_type]["modifiers"].extend([None] * len(trailing_tokens))
-                            span_prototypes[fact_type]["isStart"][-1] = True
-                            span_prototypes[fact_type]["isStart"].extend([False] * len(trailing_tokens))
-                            span_prototypes[fact_type]["isEnd"][-1] = False
-                            span_prototypes[fact_type]["isEnd"].extend([False] * len(trailing_tokens))
+                            span_prototypes[fact_type]["anchor"].extend(trailing_padding)
+                            span_prototypes[fact_type]["modifiers"].extend(trailing_padding)
+                            span_prototypes[fact_type]["isStart"][-1] = 1
+                            span_prototypes[fact_type]["isStart"].extend([0] * len(trailing_tokens))
+                            span_prototypes[fact_type]["isEnd"][-1] = 0
+                            span_prototypes[fact_type]["isEnd"].extend([0] * len(trailing_tokens))
                             # add to extracted spans and remove from prototypes
 
                             extracted_spans.append([fact_type,prototype, doc["id"], doc["text"]])
@@ -172,13 +182,14 @@ class CASLoader:
                         merged_tokens = [token]
                         merged_tokens[:0] = leading_tokens
                         merged_anchors = [anchors]
-                        merged_anchors[:0] = [None] * len(leading_tokens)
+                        leading_padding = [0] * len(leading_tokens)
+                        merged_anchors[:0] = leading_padding
                         merged_modifiers = [modifiers]
-                        merged_modifiers[:0] = [None] * len(leading_tokens)
-                        isStart = [True]
-                        isStart[:0] = [False] * len(leading_tokens)
-                        isEnd = [False]
-                        isEnd[:0] = [False] * len(leading_tokens)
+                        merged_modifiers[:0] = leading_padding
+                        isStart = [1]
+                        isStart[:0] = [0] * len(leading_tokens)
+                        isEnd = [0]
+                        isEnd[:0] = [0] * len(leading_tokens)
                         span_prototypes[fact_type] = {"tokens": merged_tokens, "anchor": merged_anchors,
                                                       "modifiers": merged_modifiers, "isStart": isStart, "isEnd": isEnd}
                     elif tag.startswith("I-"):
@@ -186,18 +197,18 @@ class CASLoader:
                         span_prototypes[fact_type]["tokens"].append(token)
                         span_prototypes[fact_type]["anchor"].append(anchors)
                         span_prototypes[fact_type]["modifiers"].append(modifiers)
-                        span_prototypes[fact_type]["isStart"].append(False)
-                        span_prototypes[fact_type]["isEnd"].append(False)
+                        span_prototypes[fact_type]["isStart"].append(0)
+                        span_prototypes[fact_type]["isEnd"].append(0)
 
                 if len(fact_tags) == 0 and span_prototypes != {}:
                     # no fact tags -> complete all prototypes, add to extracted spans and remove from prototypes
                     for fact_type, prototype in span_prototypes.items():
                         prototype["tokens"].extend(trailing_tokens)
-                        prototype["anchor"].extend([None] * len(trailing_tokens))
-                        prototype["modifiers"].extend([None] * len(trailing_tokens))
-                        prototype["isStart"].extend([False] * len(trailing_tokens))
-                        prototype["isEnd"][-1] = True
-                        prototype["isEnd"].extend([False] * len(trailing_tokens))
+                        prototype["anchor"].extend(trailing_padding)
+                        prototype["modifiers"].extend(trailing_padding)
+                        prototype["isStart"].extend([0] * len(trailing_tokens))
+                        prototype["isEnd"][-1] = 1
+                        prototype["isEnd"].extend([0] * len(trailing_tokens))
 
 
                         extracted_spans.append([fact_type, prototype, doc["id"], doc["text"]])

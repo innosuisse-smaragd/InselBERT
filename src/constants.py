@@ -14,4 +14,6 @@ M_EXTRACTION_MODEL_PATH = "./serialized_models/" + M_EXTRACTION_MODEL_NAME + "/"
 
 F_A_EXTRACTION_MODEL_OUTPUT_PATH = "./data/protected/f_a_extraction_model_output/"
 
+LABEL_ALL_TOKENS = True
+
 
