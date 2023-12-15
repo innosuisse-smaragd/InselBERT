@@ -1,3 +1,7 @@
+import os
+from datetime import datetime
+
+import bentoml
 import torch
 from torch.optim import AdamW
 from transformers import get_scheduler
@@ -29,8 +33,7 @@ config = {
 wandb_helper = WandbHelper(constants.M_EXTRACTION_MODEL_NAME, config)
 schema = SchemaGenerator()  # TODO: Impact of sharing modifiers (current implementation)
 loader = JSONLoader()
-NUM_LABELS_FACTS_ANCHORS = len(schema.label2id_anchors)
-model_helper = ModelHelper(model_rf, NUM_LABELS_FACTS_ANCHORS, schema, constants.M_EXTRACTION_MODEL_NAME)
+model_helper = ModelHelper(model_rf, schema, constants.M_EXTRACTION_MODEL_NAME, len(schema.label2id_modifiers))
 
 # TODO: Either load annotated data or output of fact extraction model
 #loader = JSONLoader()
@@ -50,36 +53,46 @@ torch.manual_seed(0)
 
 
 def tokenize_and_adjust_labels(examples):
-    tokenized_inputs = model_helper.tokenizer(examples["tokens"], truncation=True, is_split_into_words=True)
-    labels = []
-    for i, label in enumerate(examples[f"modifiers"]):
-        word_ids = tokenized_inputs.word_ids(batch_index=i)
-        if label is None or len(label) == 0:
-           label = '0'
-        previous_word_idx = None
-        label_ids = []
-        for word_idx in word_ids:
-            # Special tokens have a word id that is None. We set the label to -100 so they are automatically
-            # ignored in the loss function.
-            if word_idx is None:
-                label_ids.append(-100)
-            # We set the label for the first token of each word.
-            elif word_idx != previous_word_idx:
-                label_ids.append(label[word_idx])
-            # For the other tokens in a word, we set the label to either the current label or -100, depending on
-            # the label_all_tokens flag.
-            else:
-                label_ids.append(label[word_idx] if constants.LABEL_ALL_TOKENS else -100)
-            previous_word_idx = word_idx
+    tokenized_inputs = model_helper.tokenizer(examples["tokens"], truncation=True, is_split_into_words=True, padding="max_length")
+    labels_tok = {}
+    for label_type in ["modifiers", "isStart", "isEnd"]:
+        labels_tok[label_type] = []
+        for i, labels_modifiers in enumerate(examples[label_type]):
+            word_ids = tokenized_inputs.word_ids(batch_index=i)
+            if labels_modifiers is None or len(labels_modifiers) == 0:
+                labels_modifiers = '0'
+            previous_word_idx = None
+            label_ids = []
+            for word_idx in word_ids:
+                # Special tokens have a word id that is None. We set the labels_modifiers to -100 so they are automatically
+                # ignored in the loss function.
+                if word_idx is None:
+                    label_ids.append(-100)
+                # We set the labels_modifiers for the first token of each word.
+                elif word_idx != previous_word_idx:
+                    label_ids.append(labels_modifiers[word_idx])
+                # For the other tokens in a word, we set the labels_modifiers to either the current labels_modifiers or -100, depending on
+                # the label_all_tokens flag.
+                else:
+                    label_ids.append(labels_modifiers[word_idx] if constants.LABEL_ALL_TOKENS else -100)
+                previous_word_idx = word_idx
 
-        labels.append(label_ids)
+            labels_tok[label_type].append(label_ids)
 
-    tokenized_inputs["labels"] = labels
-    return tokenized_inputs
+    #tokenized_inputs["labels_modifiers_tok"] = labels_modifiers_tok
 
-#tokenized_hf_ds = dataset.map(tokenize_and_adjust_labels, batched=True)
+    return {
+        **tokenized_inputs,
+        "labels_modifiers_tok": labels_tok["modifiers"],
+        "labels_isStart_tok": labels_tok["isStart"],
+        "labels_isEnd_tok": labels_tok["isEnd"],
+    }
+
+print(dataset_helper.dataset["train"][0])
 
 tokenized_hf_ds = dataset_helper.apply_tokenization(tokenize_and_adjust_labels, batched=True)
+
+print(tokenized_hf_ds["train"][0])
 
 train_dl = dataset_helper.load_tokenized_dataset(tokenized_hf_ds["train"], shuffle=True)
 valid_dl = dataset_helper.load_tokenized_dataset(tokenized_hf_ds["validation"])
@@ -125,18 +138,60 @@ def do_eval(model, eval_dl):
         loss_averaged = outputs["loss"].loss  # TODO: Check calculation
 
         eval_loss += loss_averaged.detach().cpu().numpy()
-        # eval_score += compute_f1_score(batch["labels"], outputs.logits)
-        metrics_facts = model_helper.compute_metrics_for_facts(
-            [outputs["facts"].logits.cpu(), batch["labels_facts"].cpu()]
+
+        metrics_modifiers = model_helper.compute_metrics_for_anchors(
+            batch["labels_modifiers_tok"].cpu(), outputs["modifiers"].logits.cpu()
         )
-        metrics_anchors = model_helper.compute_metrics_for_anchors(
-            batch["labels_anchors"].cpu(), outputs["anchors"].logits.cpu()
+
+        metrics_isStart = model_helper.compute_metrics_for_anchors(
+            batch["labels_isStart_tok"].cpu(), outputs["isStart"].logits.cpu()
         )
-        eval_score += (metrics_facts["macro_f1_facts"] + metrics_anchors) / 2
+
+        metrics_isEnd = model_helper.compute_metrics_for_anchors(
+            batch["labels_isEnd_tok"].cpu(), outputs["isEnd"].logits.cpu()
+        )
+        eval_score += (metrics_modifiers + metrics_isStart + metrics_isEnd) / 3
         num_batches += 1
-        micro_metrics = metrics_facts
-        f1_anchors = metrics_anchors
+        f1_modifiers = metrics_modifiers
 
     eval_score /= num_batches
 
-    return eval_loss, eval_score, micro_metrics, f1_anchors
+    return eval_loss, eval_score, f1_modifiers
+
+history = []
+micro_metrics = []
+
+best_eval_loss = 100
+now = datetime.now()
+dt_string = now.strftime("%d%m%Y%H%M")
+folder_string = constants.F_A_EXTRACTION_MODEL_NAME + "_" + dt_string
+path = os.path.join(constants.F_A_EXTRACTION_MODEL_PATH, folder_string)
+
+for epoch in range(NUM_EPOCHS):
+    train_loss = do_train(model_helper.model, train_dl)
+    eval_loss, eval_score, micro_metrics_batch, f1_anchors = do_eval(model_helper.model, valid_dl)
+    micro_metrics.append((epoch + 1, micro_metrics_batch))
+    history.append((epoch + 1, train_loss, eval_loss, eval_score))
+    print(
+        "EPOCH {:d}, train loss: {:.3f}, val loss: {:.3f}, f1-score: {:.5f}".format(
+            epoch + 1, train_loss, eval_loss, eval_score
+        )
+    )
+    wandb_helper.log(train_loss=train_loss, eval_loss=eval_loss, eval_score=eval_score, f1_anchors=f1_anchors)
+    wandb_helper.log(**micro_metrics_batch)
+
+    if eval_loss < best_eval_loss:
+        best_eval_loss = eval_loss
+        model_helper.model.save_pretrained(path)
+        print("Model saved as current eval_loss is: ", best_eval_loss)
+    model_helper.save_training_history(history, path)
+    model_helper.save_micro_metrics(micro_metrics, path)
+
+bentoml.transformers.save_model(constants.M_EXTRACTION_MODEL_NAME, model_helper.model, custom_objects={
+    "fact_schema": schema,
+    "tokenizer": model_helper.tokenizer
+})
+
+model_helper.make_loss_diagram(history, path)
+
+wandb_helper.finish()

@@ -36,8 +36,7 @@ config = {
 wandb_helper = WandbHelper(constants.F_A_EXTRACTION_MODEL_NAME, config)
 schema = SchemaGenerator()  # TODO: Impact of sharing modifiers (current implementation)
 loader = CASLoader(constants.ANNOTATED_REPORTS_PATH, schema)
-NUM_LABELS_FACTS_ANCHORS = len(schema.label2id_anchors)
-model_helper = ModelHelper(model_combined, NUM_LABELS_FACTS_ANCHORS, schema, constants.F_A_EXTRACTION_MODEL_NAME)
+model_helper = ModelHelper(model_combined, schema, constants.F_A_EXTRACTION_MODEL_NAME, len(schema.label2id_anchors))
 
 reports = loader.load_CAS_convert_to_offset_dict()
 dataset = Dataset.from_list(reports)

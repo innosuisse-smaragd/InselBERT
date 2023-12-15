@@ -17,7 +17,7 @@ from transformers.modeling_outputs import (
 class BertForTokenClassificationRefinement(BertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
-        self.num_labels_modifiers = config.num_labels
+        self.num_labels = config.num_labels
 
         self.bert = BertModel(config, add_pooling_layer=False)
         classifier_dropout = (
@@ -26,13 +26,16 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
             else config.hidden_dropout_prob
         )
         self.dropout_modifiers = nn.Dropout(classifier_dropout)
-        self.classifier_modifiers = nn.Linear(config.hidden_size, self.num_labels_modifiers)
+        self.classifier_modifiers = nn.Linear(config.hidden_size, self.num_labels)
 
+# https://stackoverflow.com/questions/53628622/loss-function-its-inputs-for-binary-classification-pytorch
         self.dropout_is_start = nn.Dropout(classifier_dropout)
         self.binary_classifier_is_start = nn.Linear(config.hidden_size, 2)
 
+
         self.dropout_is_end = nn.Dropout(classifier_dropout)
         self.binary_classifier_is_end = nn.Linear(config.hidden_size, 2)
+
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -46,9 +49,9 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
         head_mask: Optional[torch.Tensor] = None,
         inputs_embeds: Optional[torch.Tensor] = None,
         # Split into three label tensors
-        labels_modifiers: Optional[torch.Tensor] = None,
-        labels_isStart: Optional[torch.Tensor] = None,
-        labels_isEnd: Optional[torch.Tensor] = None,
+        labels_modifiers_tok: Optional[torch.Tensor] = None,
+        labels_isStart_tok: Optional[torch.Tensor] = None,
+        labels_isEnd_tok: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
@@ -73,30 +76,33 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
         logits_modifiers = self.classifier_modifiers(sequence_output_modifiers)
 
         sequence_output_isStart = self.dropout_is_start(sequence_output)
-        logits_isStart = self.classifier_isStart(sequence_output_isStart)
+        logits_isStart = self.binary_classifier_is_start(sequence_output_isStart)
+
+
 
         sequence_output_isEnd = self.dropout_is_end(sequence_output)
-        logits_isEnd = self.classifier_isEnd(sequence_output_isEnd)
+        logits_isEnd = self.binary_classifier_is_end(sequence_output_isEnd)
+
 
         loss_modifiers = None
-        if labels_modifiers is not None:
+        if labels_modifiers_tok is not None:
             loss_fct_modifiers = nn.CrossEntropyLoss()
             loss_modifiers = loss_fct_modifiers(
-                logits_modifiers.view(-1, self.num_labels), labels_modifiers.view(-1)
+                logits_modifiers.view(-1, self.num_labels), labels_modifiers_tok.view(-1)
             )
 
         loss_isStart = None
-        if labels_isStart is not None:
-            loss_fct_isStart = nn.BCELoss()  # Binary Cross Entropy loss
+        if labels_isStart_tok is not None:
+            loss_fct_isStart = nn.BCEWithLogitsLoss()  # Binary Cross Entropy loss
             loss_isStart = loss_fct_isStart(
-                logits_isStart.view(-1, 2), labels_modifiers.view(-1)
+                logits_isStart.view(-1, 2), labels_modifiers_tok.view(-1)
             )
 
         loss_isEnd = None
-        if labels_isEnd is not None:
-            loss_fct_isEnd = nn.BCELoss()  # Binary Cross Entropy loss
+        if labels_isEnd_tok is not None:
+            loss_fct_isEnd = nn.BCEWithLogitsLoss()  # Binary Cross Entropy loss
             loss_isEnd = loss_fct_isEnd(
-                logits_isEnd.view(-1, 2), labels_modifiers.view(-1)
+                logits_isEnd.view(-1, 2), labels_modifiers_tok.view(-1)
             )
 
         loss_averaged = None

@@ -12,7 +12,7 @@ import torch
 
 class ModelHelper:
 
-    def __init__(self, model_def, num_labels, schema, modeltype):
+    def __init__(self, model_def, schema, modeltype, num_labels):
         self.tokenizer = self.get_tokenizer()
         self.device = self.get_device()
         self.model_def = model_def
