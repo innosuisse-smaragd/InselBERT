@@ -2,8 +2,9 @@ import os
 
 import numpy as np
 from matplotlib import pyplot as plt
-from seqeval.metrics import f1_score
+from seqeval.metrics import f1_score as f1_score_seqeval
 from sklearn.metrics import multilabel_confusion_matrix
+from sklearn.metrics import f1_score as f1_score_sklearn
 
 import constants
 from transformers import AutoTokenizer, BertConfig
@@ -58,7 +59,7 @@ class ModelHelper:
 
 
     # Metrics for single class
-    def align_predictions(self,labels_cpu, preds_cpu):
+    def align_predictions(self,labels_cpu, preds_cpu, label_type):
         # remove -100 labels from score computation
         batch_size, seq_len = preds_cpu.shape
         labels_list, preds_list = [], []
@@ -67,8 +68,16 @@ class ModelHelper:
             for sid in range(seq_len):
                 # ignore label -100
                 if labels_cpu[bid, sid] != -100:
-                    example_labels.append(self.schema.id2label_anchors[labels_cpu[bid, sid]])
-                    example_preds.append(self.schema.id2label_anchors[preds_cpu[bid, sid]])
+                    match label_type:
+                        case constants.ANCHORS:
+                            example_labels.append(self.schema.id2label_anchors[labels_cpu[bid, sid]])
+                            example_preds.append(self.schema.id2label_anchors[preds_cpu[bid, sid]])
+                        case constants.MODIFIERS:
+                            example_labels.append(self.schema.id2label_modifiers[labels_cpu[bid, sid]])
+                            example_preds.append(self.schema.id2label_modifiers[preds_cpu[bid, sid]])
+                        case constants.BINARIES:
+                            example_labels.append(labels_cpu[bid, sid])
+                            example_preds.append(preds_cpu[bid, sid])
             labels_list.append(example_labels)
             preds_list.append(example_preds)
         return labels_list, preds_list
@@ -78,9 +87,31 @@ class ModelHelper:
         # convert logits to predictions and move to CPU
         preds_cpu = torch.argmax(logits, dim=-1).cpu().numpy()
         labels_cpu = labels.cpu().numpy()
-        labels_list, preds_list = self.align_predictions(labels_cpu, preds_cpu)
+        labels_list, preds_list = self.align_predictions(labels_cpu, preds_cpu, constants.ANCHORS)
         # seqeval.metrics.f1_score takes list of list of tags
-        return f1_score(labels_list, preds_list)
+        return f1_score_seqeval(labels_list, preds_list)
+
+    def compute_metrics_for_modifiers(self,labels, logits):
+        # convert logits to predictions and move to CPU
+        preds_cpu = torch.argmax(logits, dim=-1).cpu().numpy()
+        labels_cpu = labels.cpu().numpy()
+        labels_list, preds_list = self.align_predictions(labels_cpu, preds_cpu, constants.MODIFIERS)
+        # seqeval.metrics.f1_score takes list of list of tags
+        return f1_score_seqeval(labels_list, preds_list)
+
+    def compute_metrics_for_binary_classification(self,labels, logits):
+        # convert logits to predictions and move to CPU
+        preds_cpu = torch.argmax(logits, dim=-1).cpu().numpy()
+        labels_cpu = labels.cpu().numpy()
+        labels_list, preds_list = self.align_predictions(labels_cpu, preds_cpu, constants.BINARIES)
+        # Flatten sequences for each batch
+        labels_flat_batch = [np.ravel(seq) for seq in labels_list]
+        preds_flat_batch = [np.ravel(seq) for seq in preds_list]
+        # Compute F1 score for each batch
+        f1_batch = [f1_score_sklearn(y_true, y_pred) for y_true, y_pred in zip(labels_flat_batch, preds_flat_batch)]
+        # Average F1 score across batches
+        average_f1 = np.mean(f1_batch)
+        return average_f1
 
     # Metrics for multilabel
     @staticmethod

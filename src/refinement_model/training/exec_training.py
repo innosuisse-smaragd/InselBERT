@@ -116,6 +116,7 @@ def do_train(model, train_dl):
         batch = {k: v.to(model_helper.device) for k, v in batch.items()}
         outputs = model(**batch)
         loss = outputs["loss"].loss
+        print("Average loss: ", loss)
         train_loss += loss.detach().cpu().numpy()
         loss.backward()
 
@@ -139,15 +140,15 @@ def do_eval(model, eval_dl):
 
         eval_loss += loss_averaged.detach().cpu().numpy()
 
-        metrics_modifiers = model_helper.compute_metrics_for_anchors(
+        metrics_modifiers = model_helper.compute_metrics_for_modifiers(
             batch["labels_modifiers_tok"].cpu(), outputs["modifiers"].logits.cpu()
         )
 
-        metrics_isStart = model_helper.compute_metrics_for_anchors(
+        metrics_isStart = model_helper.compute_metrics_for_binary_classification(
             batch["labels_isStart_tok"].cpu(), outputs["isStart"].logits.cpu()
         )
 
-        metrics_isEnd = model_helper.compute_metrics_for_anchors(
+        metrics_isEnd = model_helper.compute_metrics_for_binary_classification(
             batch["labels_isEnd_tok"].cpu(), outputs["isEnd"].logits.cpu()
         )
         eval_score += (metrics_modifiers + metrics_isStart + metrics_isEnd) / 3
@@ -159,7 +160,6 @@ def do_eval(model, eval_dl):
     return eval_loss, eval_score, f1_modifiers
 
 history = []
-micro_metrics = []
 
 best_eval_loss = 100
 now = datetime.now()
@@ -169,23 +169,21 @@ path = os.path.join(constants.F_A_EXTRACTION_MODEL_PATH, folder_string)
 
 for epoch in range(NUM_EPOCHS):
     train_loss = do_train(model_helper.model, train_dl)
-    eval_loss, eval_score, micro_metrics_batch, f1_anchors = do_eval(model_helper.model, valid_dl)
-    micro_metrics.append((epoch + 1, micro_metrics_batch))
+    eval_loss, eval_score, f1_modifiers = do_eval(model_helper.model, valid_dl)
     history.append((epoch + 1, train_loss, eval_loss, eval_score))
     print(
         "EPOCH {:d}, train loss: {:.3f}, val loss: {:.3f}, f1-score: {:.5f}".format(
             epoch + 1, train_loss, eval_loss, eval_score
         )
     )
-    wandb_helper.log(train_loss=train_loss, eval_loss=eval_loss, eval_score=eval_score, f1_anchors=f1_anchors)
-    wandb_helper.log(**micro_metrics_batch)
+    wandb_helper.log(train_loss=train_loss, eval_loss=eval_loss, eval_score=eval_score, f1_modifiers=f1_modifiers)
+
 
     if eval_loss < best_eval_loss:
         best_eval_loss = eval_loss
         model_helper.model.save_pretrained(path)
         print("Model saved as current eval_loss is: ", best_eval_loss)
     model_helper.save_training_history(history, path)
-    model_helper.save_micro_metrics(micro_metrics, path)
 
 bentoml.transformers.save_model(constants.M_EXTRACTION_MODEL_NAME, model_helper.model, custom_objects={
     "fact_schema": schema,

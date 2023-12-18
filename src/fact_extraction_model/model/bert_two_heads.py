@@ -79,11 +79,10 @@ class BertForFactAndAnchorClassification(BertPreTrainedModel):
                 logits_anchors.view(-1, self.num_labels), labels_anchors.view(-1)
             )
 
-        loss_averaged = None
-        if loss_facts or loss_anchors:  # TODO: Improve?
-            loss_averaged = (loss_facts + loss_anchors) / 2
+       # https://discuss.pytorch.org/t/how-to-combine-multiple-criterions-to-a-loss-function/348
+        total_loss = sum([loss_facts, loss_anchors]).float()
 
-        averaged_output = TokenClassifierOutput(loss=loss_averaged)
+        averaged_output = TokenClassifierOutput(loss=total_loss)
 
         facts_output = TokenClassifierOutput(
             loss=loss_facts,

@@ -50,11 +50,11 @@ class SchemaGenerator:
             modifiers = reasoner.get_entities(Modifier.get_type())
             tag_names = [modifier.class_name for modifier in modifiers]
 
-        index = 1
-        for element in tag_names:
-            if element not in result:
+        tag_names = set(tag_names) # remove duplicates
+        for index, element in enumerate(tag_names, start=1):
+            if element != "":
                 result[element] = index
-            index += 1
+
         return result
 
     @staticmethod

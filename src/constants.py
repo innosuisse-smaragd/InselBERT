@@ -16,4 +16,9 @@ F_A_EXTRACTION_MODEL_OUTPUT_PATH = "./data/protected/f_a_extraction_model_output
 
 LABEL_ALL_TOKENS = True
 
+FACTS = "FACTS"
+ANCHORS = "ANCHORS"
+MODIFIERS = "MODIFIERS"
+BINARIES = "BINARIES"
+
 

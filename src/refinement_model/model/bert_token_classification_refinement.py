@@ -30,11 +30,11 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
 
 # https://stackoverflow.com/questions/53628622/loss-function-its-inputs-for-binary-classification-pytorch
         self.dropout_is_start = nn.Dropout(classifier_dropout)
-        self.binary_classifier_is_start = nn.Linear(config.hidden_size, 2)
+        self.binary_classifier_is_start = nn.Linear(config.hidden_size, 1)
 
 
         self.dropout_is_end = nn.Dropout(classifier_dropout)
-        self.binary_classifier_is_end = nn.Linear(config.hidden_size, 2)
+        self.binary_classifier_is_end = nn.Linear(config.hidden_size, 1)
 
 
         # Initialize weights and apply final processing
@@ -78,11 +78,8 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
         sequence_output_isStart = self.dropout_is_start(sequence_output)
         logits_isStart = self.binary_classifier_is_start(sequence_output_isStart)
 
-
-
         sequence_output_isEnd = self.dropout_is_end(sequence_output)
         logits_isEnd = self.binary_classifier_is_end(sequence_output_isEnd)
-
 
         loss_modifiers = None
         if labels_modifiers_tok is not None:
@@ -94,22 +91,25 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
         loss_isStart = None
         if labels_isStart_tok is not None:
             loss_fct_isStart = nn.BCEWithLogitsLoss()  # Binary Cross Entropy loss
+            print("Logits isStart: ", logits_isStart)
+            print("Labels isStart: ", labels_isStart_tok)
             loss_isStart = loss_fct_isStart(
-                logits_isStart.view(-1, 2), labels_modifiers_tok.view(-1)
+                logits_isStart.view(-1), labels_isStart_tok.view(-1).float()
             )
 
         loss_isEnd = None
         if labels_isEnd_tok is not None:
             loss_fct_isEnd = nn.BCEWithLogitsLoss()  # Binary Cross Entropy loss
             loss_isEnd = loss_fct_isEnd(
-                logits_isEnd.view(-1, 2), labels_modifiers_tok.view(-1)
+                logits_isEnd.view(-1), labels_isEnd_tok.view(-1).float()
             )
 
-        loss_averaged = None
-        if loss_modifiers or loss_isStart or loss_isEnd:  # TODO: Improve?
-            loss_averaged = (loss_modifiers + loss_isStart + loss_isEnd) / 3
+        print("loss_modifiers: ", loss_modifiers)
+        print("loss_isStart: ", loss_isStart)
+        print("loss_isEnd: ", loss_isEnd)
+        total_loss = sum([loss_modifiers, loss_isStart, loss_isEnd]).float()
 
-        averaged_output = TokenClassifierOutput(loss=loss_averaged)
+        averaged_output = TokenClassifierOutput(loss=total_loss)
 
         modifiers_output = TokenClassifierOutput(
             loss=loss_modifiers,

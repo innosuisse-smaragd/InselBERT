@@ -38,5 +38,6 @@ run-bento = {cmd = "bentoml serve inselbert_extract_f_a:latest"}
 containerize-bento = {cmd = "bentoml containerize --opt platform=linux/amd64 inselbert_extract_f_a:latest"}
 
 further-pretrain = {call = "src.further_pre_training.training.exec_training:further_pretrain_model"}
-finetune-model = "python src/fact_extraction_model/training/exec_training.py"
+finetune-fact-anchor-model = "python src/fact_extraction_model/training/exec_training.py"
+finetune-modifier-model = "python src/refinement_model/training/exec_training.py"
 test-inference = "python src/refinement_model/inference/service.py"
