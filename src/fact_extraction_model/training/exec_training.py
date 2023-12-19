@@ -41,6 +41,8 @@ model_helper = ModelHelper(model_combined, schema, constants.F_A_EXTRACTION_MODE
 reports = loader.load_CAS_convert_to_offset_dict()
 dataset = Dataset.from_list(reports)
 
+print("Size of dataset: ", len(dataset))
+
 dataset_helper = DatasetHelper(dataset, batch_size=BATCH_SIZE, tokenizer=model_helper.tokenizer)
 torch.manual_seed(0)
 
@@ -148,6 +150,7 @@ train_dl = dataset_helper.load_tokenized_dataset(tokenized_hf_ds["train"], shuff
 valid_dl = dataset_helper.load_tokenized_dataset(tokenized_hf_ds["validation"])
 test_dl = dataset_helper.load_tokenized_dataset(tokenized_hf_ds["test"])
 
+print("Tokenized example: ", tokenized_hf_ds["train"][0])
 
 optimizer = AdamW(model_helper.model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 

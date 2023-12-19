@@ -30,11 +30,11 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
 
 # https://stackoverflow.com/questions/53628622/loss-function-its-inputs-for-binary-classification-pytorch
         self.dropout_is_start = nn.Dropout(classifier_dropout)
-        self.binary_classifier_is_start = nn.Linear(config.hidden_size, 1)
+        self.binary_classifier_is_start = nn.Linear(config.hidden_size, 2)
 
 
         self.dropout_is_end = nn.Dropout(classifier_dropout)
-        self.binary_classifier_is_end = nn.Linear(config.hidden_size, 1)
+        self.binary_classifier_is_end = nn.Linear(config.hidden_size, 2)
 
 
         # Initialize weights and apply final processing
@@ -83,6 +83,8 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
 
         loss_modifiers = None
         if labels_modifiers_tok is not None:
+            # Should use BCEWithLogitsLoss for binary classification, but ignore_index (-100) not implemented. Therefore,
+            # implementation as multi-class classification with CrossEntropyLoss
             loss_fct_modifiers = nn.CrossEntropyLoss()
             loss_modifiers = loss_fct_modifiers(
                 logits_modifiers.view(-1, self.num_labels), labels_modifiers_tok.view(-1)
@@ -90,23 +92,20 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
 
         loss_isStart = None
         if labels_isStart_tok is not None:
-            loss_fct_isStart = nn.BCEWithLogitsLoss()  # Binary Cross Entropy loss
-            print("Logits isStart: ", logits_isStart)
-            print("Labels isStart: ", labels_isStart_tok)
+            # Should use BCEWithLogitsLoss for binary classification, but ignore_index (-100) not implemented. Therefore,
+            # implementation as multi-class classification with CrossEntropyLoss
+            loss_fct_isStart = nn.CrossEntropyLoss()
             loss_isStart = loss_fct_isStart(
-                logits_isStart.view(-1), labels_isStart_tok.view(-1).float()
+                logits_isStart.view(-1, 2), labels_isStart_tok.view(-1)
             )
 
         loss_isEnd = None
         if labels_isEnd_tok is not None:
-            loss_fct_isEnd = nn.BCEWithLogitsLoss()  # Binary Cross Entropy loss
+            loss_fct_isEnd = nn.CrossEntropyLoss()  # Binary Cross Entropy loss
             loss_isEnd = loss_fct_isEnd(
-                logits_isEnd.view(-1), labels_isEnd_tok.view(-1).float()
+                logits_isEnd.view(-1, 2), labels_isEnd_tok.view(-1)
             )
 
-        print("loss_modifiers: ", loss_modifiers)
-        print("loss_isStart: ", loss_isStart)
-        print("loss_isEnd: ", loss_isEnd)
         total_loss = sum([loss_modifiers, loss_isStart, loss_isEnd]).float()
 
         averaged_output = TokenClassifierOutput(loss=total_loss)

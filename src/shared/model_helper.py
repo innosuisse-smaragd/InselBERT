@@ -99,11 +99,12 @@ class ModelHelper:
         # seqeval.metrics.f1_score takes list of list of tags
         return f1_score_seqeval(labels_list, preds_list)
 
-    def compute_metrics_for_binary_classification(self,labels, logits):
+    def compute_metrics_for_binary_classification(self,labels, logits): # TODO: Verify
         # convert logits to predictions and move to CPU
         preds_cpu = torch.argmax(logits, dim=-1).cpu().numpy()
         labels_cpu = labels.cpu().numpy()
         labels_list, preds_list = self.align_predictions(labels_cpu, preds_cpu, constants.BINARIES)
+
         # Flatten sequences for each batch
         labels_flat_batch = [np.ravel(seq) for seq in labels_list]
         preds_flat_batch = [np.ravel(seq) for seq in preds_list]

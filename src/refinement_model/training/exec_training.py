@@ -116,7 +116,6 @@ def do_train(model, train_dl):
         batch = {k: v.to(model_helper.device) for k, v in batch.items()}
         outputs = model(**batch)
         loss = outputs["loss"].loss
-        print("Average loss: ", loss)
         train_loss += loss.detach().cpu().numpy()
         loss.backward()
 
@@ -126,7 +125,6 @@ def do_train(model, train_dl):
 
     return train_loss
 
-# TODO: Change to modifier and binary classification loss
 def do_eval(model, eval_dl):
     model.eval()
     eval_loss, eval_score, num_batches, f1_anchors = 0, 0, 0, 0
@@ -136,7 +134,7 @@ def do_eval(model, eval_dl):
         with torch.no_grad():
             outputs = model(**batch)
 
-        loss_averaged = outputs["loss"].loss  # TODO: Check calculation
+        loss_averaged = outputs["loss"].loss
 
         eval_loss += loss_averaged.detach().cpu().numpy()
 
