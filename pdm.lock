@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform"]
 lock_version = "4.4"
-content_hash = "sha256:0776ddc24dcee387d932532898555a583929d11ac2136cefaca027eb8421eb57"
+content_hash = "sha256:97c86d6d7af5f75b1682ff9bf4842aa7fdcdf21734d4990e8c9fe7dcc7af31dc"
 
 [[package]]
 name = "accelerate"
@@ -720,6 +720,30 @@ dependencies = [
 files = [
     {file = "docker-pycreds-0.4.0.tar.gz", hash = "sha256:6ce3270bcaf404cc4c3e27e4b6c70d3521deae82fb508767870fdbf772d584d4"},
     {file = "docker_pycreds-0.4.0-py2.py3-none-any.whl", hash = "sha256:7266112468627868005106ec19cd0d722702d2b7d5912a28e19b826c3d37af49"},
+]
+
+[[package]]
+name = "evaluate"
+version = "0.4.1"
+requires_python = ">=3.7.0"
+summary = "HuggingFace community-driven open-source library of evaluation"
+dependencies = [
+    "datasets>=2.0.0",
+    "dill",
+    "fsspec[http]>=2021.05.0",
+    "huggingface-hub>=0.7.0",
+    "multiprocess",
+    "numpy>=1.17",
+    "packaging",
+    "pandas",
+    "requests>=2.19.0",
+    "responses<0.19",
+    "tqdm>=4.62.1",
+    "xxhash",
+]
+files = [
+    {file = "evaluate-0.4.1-py3-none-any.whl", hash = "sha256:3ff079ab09572c0a2c1e6d749887c19f6783ab993320412cd39f6fe501d28510"},
+    {file = "evaluate-0.4.1.tar.gz", hash = "sha256:d721d9f2059ced79770d8a0509e954fbd1bbac96a8f9160e29888d8073cda3d9"},
 ]
 
 [[package]]
@@ -2415,6 +2439,20 @@ dependencies = [
 files = [
     {file = "requests-2.31.0-py3-none-any.whl", hash = "sha256:58cd2187c01e70e6e26505bca751777aa9f2ee0b7f4300988b709f44e013003f"},
     {file = "requests-2.31.0.tar.gz", hash = "sha256:942c5a758f98d790eaed1a29cb6eefc7ffb0d1cf7af05c3d2791656dbd6ad1e1"},
+]
+
+[[package]]
+name = "responses"
+version = "0.18.0"
+requires_python = ">=3.7"
+summary = "A utility library for mocking out the `requests` Python library."
+dependencies = [
+    "requests<3.0,>=2.0",
+    "urllib3>=1.25.10",
+]
+files = [
+    {file = "responses-0.18.0-py3-none-any.whl", hash = "sha256:15c63ad16de13ee8e7182d99c9334f64fd81f1ee79f90748d527c28f7ca9dd51"},
+    {file = "responses-0.18.0.tar.gz", hash = "sha256:380cad4c1c1dc942e5e8a8eaae0b4d4edf708f4f010db8b7bcfafad1fcd254ff"},
 ]
 
 [[package]]

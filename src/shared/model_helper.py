@@ -22,6 +22,8 @@ class ModelHelper:
             self.model = self.get_further_pretrained_model_for_f_a_extraction()
         elif modeltype == constants.M_EXTRACTION_MODEL_NAME:
             self.model = self.get_further_pretrained_model_for_modifier_extraction()
+        elif modeltype == constants.QA_MODEL_NAME:
+            self.model = self.get_further_pretrained_model_for_qa()
         self.model.to(self.device)
         self.schema = schema
 
@@ -51,9 +53,18 @@ class ModelHelper:
 
         model = self.model_def.BertForTokenClassificationRefinement.from_pretrained(
             constants.PRETRAINED_MODEL_PATH,
-            num_labels=self.num_labels
            # label2id=label2id,
            # id2label=id2label,  # TODO: add other mappings- but how?
+        )
+        return model
+
+    def get_further_pretrained_model_for_qa(self):
+
+        model = self.model_def.from_pretrained(
+            constants.PRETRAINED_MODEL_PATH,
+            num_labels=self.num_labels
+            # label2id=label2id,
+            # id2label=id2label,  # TODO: add other mappings- but how?
         )
         return model
 

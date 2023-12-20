@@ -32,7 +32,6 @@ config = {
 
 wandb_helper = WandbHelper(constants.M_EXTRACTION_MODEL_NAME, config)
 schema = SchemaGenerator()  # TODO: Impact of sharing modifiers (current implementation)
-loader = JSONLoader()
 model_helper = ModelHelper(model_rf, schema, constants.M_EXTRACTION_MODEL_NAME, len(schema.label2id_modifiers))
 
 # TODO: Either load annotated data or output of fact extraction model

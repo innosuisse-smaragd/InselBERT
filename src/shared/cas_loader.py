@@ -6,6 +6,7 @@ from smaragd_shared_python.annotation.document_parser import DocumentParser
 from smaragd_shared_python.annotation.uima_util import UIMAUtil
 from constants import ANNOTATED_REPORTS_PATH
 import pandas
+import re
 
 
 class DatasetEntry:
@@ -176,7 +177,7 @@ class CASLoader:
                             span_prototypes[fact_type]["isEnd"].extend([0] * len(trailing_tokens))
                             # add to extracted spans and remove from prototypes
 
-                            extracted_spans.append([fact_type,prototype, doc["id"], doc["text"]])
+                            extracted_spans.append([fact_type, prototype, doc["id"], doc["text"]])
                             span_prototypes.pop(fact_type)
                         # add token, as well as anchor and modifier tag lists to prototype
                         merged_tokens = [token]
@@ -210,7 +211,6 @@ class CASLoader:
                         prototype["isEnd"][-1] = 1
                         prototype["isEnd"].extend([0] * len(trailing_tokens))
 
-
                         extracted_spans.append([fact_type, prototype, doc["id"], doc["text"]])
                     span_prototypes = {}
 
@@ -225,3 +225,66 @@ class CASLoader:
                     extracted_spans.append([fact_type, prototype, doc["id"], doc["text"]])
 
         return extracted_spans
+
+    def load_CAS_convert_to_offset_dict_qa_single_answer(self, dictlist):
+        #dictlist = self.load_CAS_convert_to_offset_dict()
+        # Multiplex each entry in dictlist to one entry per fact for training
+        dictlist_qa = []
+        for doc in dictlist:
+            for i, fact in enumerate(doc["fact_tags"]):
+                fact_type = fact["tag"]
+                fact_answer = doc["text"][fact["start"]:fact["end"]]
+                answers = {
+                    "text": [fact_answer],
+                    "answer_start": [fact["start"]],
+                }
+                fact_text = doc["text"]
+                match = re.search(r'(\d+)\.xmi$', doc["id"])
+                fact_id = match.group(1) + "_" + str(i) + "_" + fact_type
+                dictlist_qa.append({"id": fact_id, "question": fact_type, "context": fact_text, "answers": answers})
+
+        return dictlist_qa
+
+    def load_CAS_convert_to_offset_dict_qa_multi_answer(self, dictlist):
+        #dictlist = self.load_CAS_convert_to_offset_dict()
+        # Multiplex each entry in dictlist to one entry per fact for training
+        dictlist_qa = []
+        for doc in dictlist:
+            facts_in_doc = []
+            for i, fact in enumerate(doc["fact_tags"]):
+                fact_type = fact["tag"]
+                fact_text = doc["text"]
+                match = re.search(r'(\d+)\.xmi$', doc["id"])
+                fact_id = match.group(1) + "_" + str(i) + "_" + fact_type
+
+                fact_answer = doc["text"][fact["start"]:fact["end"]]
+                fact_start_index = fact["start"]
+                answers = {
+                    "text": [fact_answer],
+                    "answer_start": [fact_start_index],
+                }
+                if facts_in_doc == []:
+                    facts_in_doc.append(
+                        {"id": fact_id, "question": fact_type, "context": fact_text, "answers": answers})
+                else:
+                    for fact_dict in facts_in_doc:
+                        if fact_dict["question"] == fact_type:
+                            fact_dict["answers"]["text"].append(fact_answer)
+                            fact_dict["answers"]["answer_start"].append(fact_start_index)
+                            break
+                    else:
+                        facts_in_doc.append(
+                            {"id": fact_id, "question": fact_type, "context": fact_text, "answers": answers})
+
+            dictlist_qa.extend(facts_in_doc)
+
+        return dictlist_qa
+
+    def load_CAS_convert_to_offset_dict_qa_train_test_split(self):
+        dictlist = self.load_CAS_convert_to_offset_dict()
+        training = dictlist[:int(len(dictlist) * 0.8)]
+        evaluation = dictlist[-int(len(dictlist) * 0.2):]
+        train_examples_single = self.load_CAS_convert_to_offset_dict_qa_single_answer(training)
+        eval_examples_multi = self.load_CAS_convert_to_offset_dict_qa_multi_answer(evaluation)
+        return train_examples_single, eval_examples_multi
+
