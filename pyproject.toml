@@ -15,6 +15,7 @@ dependencies = [
     "seqeval>=1.2.2",
     "matplotlib>=3.7.2",
     "evaluate>=0.4.1",
+    "streamlit>=1.30.0",
 ]
 requires-python = ">=3.11"
 
@@ -36,9 +37,13 @@ fix-import-order = {cmd = "isort ./src ./test"}
 run-bento-dev = {cmd = "bentoml serve service:svc --reload"}
 build-bento = {cmd = "bentoml build ./src/"}
 run-bento = {cmd = "bentoml serve inselbert_extract_f_a:latest"}
-containerize-bento = {cmd = "bentoml containerize --opt platform=linux/amd64 inselbert_extract_f_a:latest"}
+containerize-bento = {cmd = "bentoml containerize --opt platform=linux/amd64 inselbert_extract_f_qa:latest"}
 
 further-pretrain = {call = "src.further_pre_training.training.exec_training:further_pretrain_model"}
 finetune-fact-anchor-model = "python src/fact_extraction_model/training/exec_training.py"
 finetune-modifier-model = "python src/refinement_model/training/exec_training.py"
 test-inference = "python src/refinement_model/inference/service.py"
+
+test-qa = "python src/qa_model/run_inference.py"
+
+save-qa-model-to-bento = "python src/qa_model/make_bento.py"
