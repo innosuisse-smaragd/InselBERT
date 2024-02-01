@@ -161,8 +161,8 @@ history = []
 best_eval_loss = 100
 now = datetime.now()
 dt_string = now.strftime("%d%m%Y%H%M")
-folder_string = constants.F_A_EXTRACTION_MODEL_NAME + "_" + dt_string
-path = os.path.join(constants.F_A_EXTRACTION_MODEL_PATH, folder_string)
+folder_string = constants.M_EXTRACTION_MODEL_PATH + "_" + dt_string
+path = os.path.join(constants.M_EXTRACTION_MODEL_PATH, folder_string)
 
 for epoch in range(NUM_EPOCHS):
     train_loss = do_train(model_helper.model, train_dl)

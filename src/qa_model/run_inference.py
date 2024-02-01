@@ -1,12 +1,11 @@
 from transformers import pipeline
 
-import constants
 import pprint
+import bentoml
 
 # Replace this with your own checkpoint
-model_checkpoint = constants.QA_MODEL_PATH + "checkpoint-963"
+model_checkpoint = "./serialized_models/inselbert_qa_hf/"
 question_answerer = pipeline("question-answering", model=model_checkpoint, handle_impossible_answer=True)
-
 context = """
 Klinische Angaben:
 
@@ -22,6 +21,7 @@ Zwei kleine Mikroverkalkungen im oberen rechten Quadranten.
 Die Mammographiebefunde sind im Rahmen des Normalen. Keine Anzeichen von malignen Läsionen oder anderen pathologischen Veränderungen.
 Empfehlung: Regelmäßiges Mammographiescreening gemäß den aktuellen Leitlinien.
 BIRADS-level: 6. 
+ACR-Klassifizierung: 2
 """
 question = "ACR Klassifizierung erwähnt"
 answer = question_answerer(question=question, context=context, top_k=3)

@@ -246,8 +246,6 @@ class CASLoader:
         return dictlist_qa
 
     def load_CAS_convert_to_offset_dict_qa_multi_answer(self, dictlist):
-        #dictlist = self.load_CAS_convert_to_offset_dict()
-        # Multiplex each entry in dictlist to one entry per fact for training
         dictlist_qa = []
         for doc in dictlist:
             facts_in_doc = []

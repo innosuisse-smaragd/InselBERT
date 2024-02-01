@@ -29,6 +29,13 @@ This folder contains the fine-tuned model which is composed of the medbert_512_p
 
 This folder contains the second, fine-tuned model which is composed of the same medbert_512_pretrained encoder body of medbert_512_facts. Additionally, three classification heads are added. Two binary classification heads predict whether a token is the beginning or end of a fact span, respectively. A third, multi-class classification head predicts which modifier (0..1) a token is part of. Once trained, this model takes a fact candidate, which corresponds to the validated output of the former model, X tokens before and after the fact candidate as well as the information which fact was identified (see open issues).
 
+### inselbert_qa_hf
+
+This folder contains the model for extractive question answering trained with the example script provided by HuggingFace.
+The model must be trained in a separate repository, as source installation of the transformers library is required. Copy the resulting model files into
+serialized_models/inselbert_qa_hf and run `pdm save-qa-model-to-bento` to create a BentoService for the model.
+The model takes a question and a clinical text as input and returns the answer span to the question.
+
 ## Open issues
 
 - Context information: How can we integrate context information (which fact was identified, position of anchor, position of fact within wider context) into the model?

@@ -157,6 +157,14 @@ class FactExtractionRunnable(bentoml.Runnable):
 fact_extraction_runner = bentoml.Runner(FactExtractionRunnable, name="f_a_extraction_runner", models=[model_ref])
 svc = bentoml.Service("inselbert_extract_f_a", runners=[fact_extraction_runner])
 
+# qa_runner = bentoml.transformers.get("inselbert_extract_f_qa:latest").to_runner()
+#svc = bentoml.Service("inselbert_extract_f_qa", runners=[qa_runner])
+
+
+#@svc.api(input=bentoml.io.Text(), output=bentoml.io.JSON())
+#async def extract_facts_and_anchors(inp: str):
+ #   return await qa_runner.async_run(inp)
+
 
 @svc.api(input=bentoml.io.Text(), output=bentoml.io.JSON())
 async def extract_facts_and_anchors(inp: str):
