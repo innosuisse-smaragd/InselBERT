@@ -5,7 +5,7 @@ from transformers import DataCollatorWithPadding
 
 class DatasetHelper:
 
-    def __init__(self, dataset, tokenizer, batch_size):
+    def __init__(self, dataset, tokenizer, batch_size=16):
         self.dataset = self.create_data_splits(dataset)
         self.data_collator = DataCollatorWithPadding(
             tokenizer, padding="longest", return_tensors="pt"
@@ -13,7 +13,6 @@ class DatasetHelper:
         self.batch_size = batch_size
 
     def create_data_splits(self, dataset):
-        print("First dataset entry: ", dataset[0])
         # split twice and combine
         train_devtest = dataset.train_test_split(
             shuffle=True, seed=200, test_size=0.3

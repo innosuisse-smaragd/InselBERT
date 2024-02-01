@@ -46,6 +46,7 @@ dictlist = []
 for entry in extracted_facts_with_metadata:
     dictlist.append(entry[1])
 
+print(dictlist)
 dataset = Dataset.from_list(dictlist)
 dataset_helper = DatasetHelper(dataset, batch_size=BATCH_SIZE, tokenizer=model_helper.tokenizer)
 torch.manual_seed(0)
@@ -161,8 +162,8 @@ history = []
 best_eval_loss = 100
 now = datetime.now()
 dt_string = now.strftime("%d%m%Y%H%M")
-folder_string = constants.M_EXTRACTION_MODEL_PATH + "_" + dt_string
-path = os.path.join(constants.M_EXTRACTION_MODEL_PATH, folder_string)
+path = constants.M_EXTRACTION_MODEL_PATH + constants.M_EXTRACTION_MODEL_NAME + "_" + dt_string
+#path = os.path.join(constants.M_EXTRACTION_MODEL_PATH, folder_string)
 
 for epoch in range(NUM_EPOCHS):
     train_loss = do_train(model_helper.model, train_dl)
@@ -180,12 +181,14 @@ for epoch in range(NUM_EPOCHS):
         best_eval_loss = eval_loss
         model_helper.model.save_pretrained(path)
         print("Model saved as current eval_loss is: ", best_eval_loss)
-    model_helper.save_training_history(history, path)
 
-bentoml.transformers.save_model(constants.M_EXTRACTION_MODEL_NAME, model_helper.model, custom_objects={
-    "fact_schema": schema,
-    "tokenizer": model_helper.tokenizer
-})
+
+        bentoml.transformers.save_model(constants.M_EXTRACTION_MODEL_NAME, model_helper.model, custom_objects={
+            "fact_schema": schema,
+            "tokenizer": model_helper.tokenizer
+        })
+
+    model_helper.save_training_history(history, path)
 
 model_helper.make_loss_diagram(history, path)
 

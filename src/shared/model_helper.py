@@ -18,14 +18,17 @@ class ModelHelper:
         self.device = self.get_device()
         self.model_def = model_def
         self.num_labels = num_labels
+        self.schema = schema
         if modeltype == constants.F_A_EXTRACTION_MODEL_NAME:
             self.model = self.get_further_pretrained_model_for_f_a_extraction()
         elif modeltype == constants.M_EXTRACTION_MODEL_NAME:
             self.model = self.get_further_pretrained_model_for_modifier_extraction()
         elif modeltype == constants.QA_MODEL_NAME:
             self.model = self.get_further_pretrained_model_for_qa()
+        elif modeltype == constants.SEQ_LABELLING_MODEL_NAME:
+            self.model = self.get_further_pretrained_model_for_sequence_labelling()
         self.model.to(self.device)
-        self.schema = schema
+
 
     @staticmethod
     def get_tokenizer():
@@ -65,6 +68,16 @@ class ModelHelper:
             num_labels=self.num_labels
             # label2id=label2id,
             # id2label=id2label,  # TODO: add other mappings- but how?
+        )
+        return model
+
+    def get_further_pretrained_model_for_sequence_labelling(self):
+
+        model = self.model_def.from_pretrained(
+            constants.PRETRAINED_MODEL_PATH,
+            num_labels=self.num_labels,
+            label2id=self.schema.label2id_combined,
+            id2label=self.schema.id2label_combined
         )
         return model
 

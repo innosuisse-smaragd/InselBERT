@@ -1,6 +1,9 @@
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer
 import bentoml
 
-model_checkpoint = "./serialized_models/inselbert_qa_hf/"
-question_answerer = pipeline("question-answering", model=model_checkpoint, handle_impossible_answer=True)
-bentoml.transformers.save_model(name="inselbert_extract_f_qa", pipeline=question_answerer)
+import constants
+
+tokenizer = AutoTokenizer.from_pretrained(constants.BASE_MODEL_NAME)
+model_checkpoint = constants.QA_HF_MODEL_PATH
+question_answerer = pipeline("question-answering", model=model_checkpoint, handle_impossible_answer=True, tokenizer=tokenizer)
+bentoml.transformers.save_model(name=constants.QA_HF_MODEL_NAME, pipeline=question_answerer)

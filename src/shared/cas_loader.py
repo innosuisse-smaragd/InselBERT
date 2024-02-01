@@ -226,7 +226,7 @@ class CASLoader:
 
         return extracted_spans
 
-    def load_CAS_convert_to_combined_tag_list_seq_labelling(self):
+    def load_CAS_convert_to_combined_tag_list_seq_labelling(self, encode=True):
         dictlist = self.load_cas_and_convert_to_dict_list()
         extracted_spans = []  # contains list of tuples of fact type and spans
         for index, doc in enumerate(dictlist):
@@ -236,17 +236,24 @@ class CASLoader:
                 for j, tag in enumerate(fact_tags):
                     fact_type = tag[2:]
                     token = doc["text"][i]
-
                     anchors = doc["anchor_tags"][i]
-                    if len(anchors) == 0:
-                        anchors = 0
-                    else:
-                        anchors = self.schema.label2id_anchors[anchors[0]]
                     modifiers = doc["modifier_tags"][i]
+
                     if len(modifiers) == 0:
-                        modifiers = 0
+                        if encode:
+                            combined_tags = 0
+                        else:
+                            combined_tags = "O"
                     else:
-                        modifiers = self.schema.label2id_modifiers[modifiers[0]]
+                        if encode:
+                            combined_tags = self.schema.label2id_combined[modifiers[0]]
+                        else:
+                            combined_tags = modifiers[0]
+                    if not len(anchors) == 0:
+                        if encode:
+                            combined_tags = self.schema.label2id_combined[anchors[0]] # put first (and only) anchor tag in modifier tag
+                        else:
+                            combined_tags = anchors[0]
 
                     if tag.startswith("B-"):  # new fact type
                         if fact_type in span_prototypes.keys():  # there is already a prototype for this fact type
@@ -256,15 +263,12 @@ class CASLoader:
                             span_prototypes.pop(fact_type)
                         # add token, as well as anchor and modifier tag lists to prototype
                         merged_tokens = [token]
-                        merged_anchors = [anchors]
-                        merged_modifiers = [modifiers]
-                        span_prototypes[fact_type] = {"tokens": merged_tokens, "anchor": merged_anchors,
-                                                      "modifiers": merged_modifiers}
+                        merged_tags = [combined_tags]
+                        span_prototypes[fact_type] = {"tokens": merged_tokens, "tags": merged_tags}
                     elif tag.startswith("I-"):
                         # there must be already a fact prototype -> add token, anchors and modifiers
                         span_prototypes[fact_type]["tokens"].append(token)
-                        span_prototypes[fact_type]["anchor"].append(anchors)
-                        span_prototypes[fact_type]["modifiers"].append(modifiers)
+                        span_prototypes[fact_type]["tags"].append(combined_tags)
 
                 if len(fact_tags) == 0 and span_prototypes != {}:
                     # no fact tags -> complete all prototypes, add to extracted spans and remove from prototypes
