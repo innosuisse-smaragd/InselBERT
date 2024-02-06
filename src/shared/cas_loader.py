@@ -343,5 +343,6 @@ class CASLoader:
         evaluation = dictlist[-int(len(dictlist) * 0.2):]
         train_examples_single = self.load_CAS_convert_to_offset_dict_qa_single_answer(training)
         eval_examples_multi = self.load_CAS_convert_to_offset_dict_qa_multi_answer(evaluation)
+        # TODO: Split evaluation into evaluation and validation
         return train_examples_single, eval_examples_multi
 
