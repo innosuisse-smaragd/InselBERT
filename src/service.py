@@ -1,23 +1,15 @@
 import itertools
 
 import bentoml
-import pandas as pd
-import torch
-from bentoml._internal.io_descriptors import JSON
+from bentoml.io import JSON
 from pydantic import BaseModel
 
 import constants
 
 
-
 class InferenceRequest(BaseModel):
     reportText: str
     fact: str
-
-
-class InferenceModifier(BaseModel):
-    id: str
-    span: str
 
 
 class InferenceFact(BaseModel):
@@ -27,11 +19,10 @@ class InferenceFact(BaseModel):
     end: int
     score: float
     alternatives: str
-    tags: object = {}
-    #anchorEntity: str
-    modifiers: object = {}
-    merged_tags: object = {}
-    extracted_tags: object = {}
+    extracted_tokens: object = {}
+    merged_tokens: object = {}
+    extracted_entities: object = {}
+
 
 
 class InferenceResponse(BaseModel):
@@ -39,8 +30,11 @@ class InferenceResponse(BaseModel):
     facts: list[InferenceFact]
 
 
-qa_runner = bentoml.models.get(constants.QA_HF_MODEL_NAME + ":latest").to_runner()
+qa_model = bentoml.models.get(constants.QA_HF_MODEL_NAME + ":latest")
+qa_runner = qa_model.to_runner()
 seq_labelling_runner = bentoml.models.get(constants.SEQ_LABELLING_MODEL_NAME + ":latest").to_runner()
+
+schema = qa_model.custom_objects.get("fact_schema")
 svc = bentoml.Service("inselbert_extract", runners=[qa_runner, seq_labelling_runner])
 
 
@@ -85,8 +79,9 @@ async def do_inference(request: InferenceRequest) -> InferenceResponse:
 
     for fact in facts:
         print("Fact: ", fact.id)
-        extracted_tags = await seq_labelling_runner.async_run(inputs=fact.span)
-        fact.extracted_tags = extracted_tags
+        extracted_tokens = await seq_labelling_runner.async_run(inputs=fact.span)
+        fact.extracted_tokens = extracted_tokens
+
 # TODO: Maybe sort out tags with low scores
 
         # Merge subword-tokens
@@ -94,7 +89,7 @@ async def do_inference(request: InferenceRequest) -> InferenceResponse:
         prev_tok = None
         prev_end = 0
         prev_start = 0
-        for tag in extracted_tags:
+        for tag in extracted_tokens:
             if tag['word'].startswith("##") and prev_tok is not None:
                 prev_tok += tag['word'][2:]
                 prev_end = tag['end']
@@ -107,14 +102,14 @@ async def do_inference(request: InferenceRequest) -> InferenceResponse:
                 prev_start = tag['start']
         if prev_tok is not None:
             results.append({"word": prev_tok, "tag": prev_tag, "start": prev_start, "end": prev_end})
-        fact.tags = results
+        fact.merged_tokens = results
 
         # Merge B- and I- tags to one tag
         merged_tags = []
         prev_word = None
         prev_end = 0
         prev_start = 0
-        for tag in fact.tags:
+        for tag in fact.merged_tokens:
             if tag['tag'].startswith("I-") and prev_word is not None:
                 prev_word += " " + tag['word']
                 prev_end = tag['end']
@@ -127,9 +122,7 @@ async def do_inference(request: InferenceRequest) -> InferenceResponse:
                 prev_start = tag['start']
         if prev_word is not None:
             merged_tags.append({"word": prev_word, "tag": prev_tag[2:], "start": prev_start, "end": prev_end})
-        fact.merged_tags = merged_tags
-
-    # TODO: Separate anchor entity labels from modifier labels
+        fact.extracted_entities = merged_tags
 
     return InferenceResponse(message="", facts=facts)
 
