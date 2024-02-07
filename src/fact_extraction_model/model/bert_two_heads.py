@@ -80,7 +80,7 @@ class BertForFactAndAnchorClassification(BertPreTrainedModel):
             )
 
        # https://discuss.pytorch.org/t/how-to-combine-multiple-criterions-to-a-loss-function/348
-        total_loss = sum([loss_facts, loss_anchors]).float()
+        total_loss = sum(filter(None, [loss_facts, loss_anchors]))
 
         averaged_output = TokenClassifierOutput(loss=total_loss)
 

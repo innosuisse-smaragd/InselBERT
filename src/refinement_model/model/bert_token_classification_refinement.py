@@ -81,6 +81,7 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
         sequence_output_isEnd = self.dropout_is_end(sequence_output)
         logits_isEnd = self.binary_classifier_is_end(sequence_output_isEnd)
 
+        losses = []
         loss_modifiers = None
         if labels_modifiers_tok is not None:
             # Should use BCEWithLogitsLoss for binary classification, but ignore_index (-100) not implemented. Therefore,
@@ -89,6 +90,7 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
             loss_modifiers = loss_fct_modifiers(
                 logits_modifiers.view(-1, self.num_labels), labels_modifiers_tok.view(-1)
             )
+            losses.append(loss_modifiers)
 
         loss_isStart = None
         if labels_isStart_tok is not None:
@@ -98,6 +100,7 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
             loss_isStart = loss_fct_isStart(
                 logits_isStart.view(-1, 2), labels_isStart_tok.view(-1)
             )
+            losses.append(loss_isStart)
 
         loss_isEnd = None
         if labels_isEnd_tok is not None:
@@ -105,8 +108,10 @@ class BertForTokenClassificationRefinement(BertPreTrainedModel):
             loss_isEnd = loss_fct_isEnd(
                 logits_isEnd.view(-1, 2), labels_isEnd_tok.view(-1)
             )
+            losses.append(loss_isEnd)
 
-        total_loss = sum([loss_modifiers, loss_isStart, loss_isEnd]).float()
+        # https://discuss.pytorch.org/t/how-to-combine-multiple-criterions-to-a-loss-function/348
+        total_loss = sum(filter(None, losses))
 
         averaged_output = TokenClassifierOutput(loss=total_loss)
 
