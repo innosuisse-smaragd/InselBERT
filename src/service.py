@@ -27,8 +27,11 @@ class InferenceFact(BaseModel):
     end: int
     score: float
     alternatives: str
+    tags: object = {}
     #anchorEntity: str
-    #modifiers: list[InferenceModifier]
+    modifiers: object = {}
+    merged_tags: object = {}
+    extracted_tags: object = {}
 
 
 class InferenceResponse(BaseModel):
@@ -37,7 +40,8 @@ class InferenceResponse(BaseModel):
 
 
 qa_runner = bentoml.models.get(constants.QA_HF_MODEL_NAME + ":latest").to_runner()
-svc = bentoml.Service("inselbert_extract", runners=[qa_runner])
+seq_labelling_runner = bentoml.models.get(constants.SEQ_LABELLING_MODEL_NAME + ":latest").to_runner()
+svc = bentoml.Service("inselbert_extract", runners=[qa_runner, seq_labelling_runner])
 
 
 def words_overlap(slice1, slice2):
@@ -50,9 +54,11 @@ def words_overlap(slice1, slice2):
 @svc.api(input=JSON(pydantic_model=InferenceRequest),
          output=JSON(pydantic_model=InferenceResponse))
 async def do_inference(request: InferenceRequest) -> InferenceResponse:
+    facts = []
+    # Step 1: Extract facts from the report by extractive question answering
     answers = await qa_runner.async_run(question=request.fact, context=request.reportText, top_k=3)
     print("Raw answers: ",answers)
-    facts = []
+
     alternatives = []
     if answers[0]['answer'] == "":
         return InferenceResponse(message="The report does not contain the specified fact.", facts=[])
@@ -74,6 +80,57 @@ async def do_inference(request: InferenceRequest) -> InferenceResponse:
                 alternatives.append(answer)
             else:
                 facts.append(InferenceFact(id=request.fact, span=answer['answer'], score=answer['score'], start=answer['start'], end=answer['end'], alternatives=str(alternatives)))
+
+    # Step 2: Labelling of anchors and modifiers
+
+    for fact in facts:
+        print("Fact: ", fact.id)
+        extracted_tags = await seq_labelling_runner.async_run(inputs=fact.span)
+        fact.extracted_tags = extracted_tags
+# TODO: Maybe sort out tags with low scores
+
+        # Merge subword-tokens
+        results = []
+        prev_tok = None
+        prev_end = 0
+        prev_start = 0
+        for tag in extracted_tags:
+            if tag['word'].startswith("##") and prev_tok is not None:
+                prev_tok += tag['word'][2:]
+                prev_end = tag['end']
+            else:
+                if prev_tok is not None:
+                    results.append({"word": prev_tok, "tag": prev_tag, "start": prev_start, "end": prev_end})
+                prev_tok = tag['word']
+                prev_end = tag['end']
+                prev_tag = tag['entity']
+                prev_start = tag['start']
+        if prev_tok is not None:
+            results.append({"word": prev_tok, "tag": prev_tag, "start": prev_start, "end": prev_end})
+        fact.tags = results
+
+        # Merge B- and I- tags to one tag
+        merged_tags = []
+        prev_word = None
+        prev_end = 0
+        prev_start = 0
+        for tag in fact.tags:
+            if tag['tag'].startswith("I-") and prev_word is not None:
+                prev_word += " " + tag['word']
+                prev_end = tag['end']
+            else:
+                if prev_word is not None:
+                    merged_tags.append({"word": prev_word, "tag": prev_tag[2:], "start": prev_start, "end": prev_end})
+                prev_word = tag['word']
+                prev_tag = tag['tag']
+                prev_end = tag['end']
+                prev_start = tag['start']
+        if prev_word is not None:
+            merged_tags.append({"word": prev_word, "tag": prev_tag[2:], "start": prev_start, "end": prev_end})
+        fact.merged_tags = merged_tags
+
+    # TODO: Separate anchor entity labels from modifier labels
+
     return InferenceResponse(message="", facts=facts)
 
 
