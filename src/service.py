@@ -34,8 +34,7 @@ qa_model = bentoml.models.get(constants.QA_HF_MODEL_NAME + ":latest")
 qa_runner = qa_model.to_runner()
 seq_labelling_runner = bentoml.models.get(constants.SEQ_LABELLING_MODEL_NAME + ":latest").to_runner()
 
-schema = qa_model.custom_objects.get("fact_schema")
-svc = bentoml.Service("inselbert_extract", runners=[qa_runner, seq_labelling_runner])
+svc = bentoml.Service("inselbertfactextractor", runners=[qa_runner, seq_labelling_runner])
 
 
 def words_overlap(slice1, slice2):

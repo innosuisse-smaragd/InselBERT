@@ -1,9 +1,11 @@
 service: "service.py:svc"
 include:
-- "*.py"
+  - "service.py"
+  - "constants.py"
 python:
   packages:
   - transformers
   - torch
   - numpy
   - pandas
+  - pydantic
