@@ -35,6 +35,7 @@ check-import-order = {cmd = "isort ./src ./test --check-only"}
 fix-import-order = {cmd = "isort ./src ./test"}
 
 further-pretrain = {call = "src.further_pre_training.training.exec_training:further_pretrain_model"}
+generate-dataset-json-for-qa-model = "python3 src/qa_model_hf/make_json.py"
 finetune-sequence-labelling-model = "python3 src/seq_labelling_model/exec_training.py"
 
 save-qa-model-to-bento = "python src/qa_model_hf/make_bento.py"

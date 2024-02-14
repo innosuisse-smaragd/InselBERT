@@ -32,8 +32,9 @@ This folder contains the second, fine-tuned model which is composed of the same 
 ### inselbert_qa_hf
 
 This folder contains the model for extractive question answering trained with the example script provided by HuggingFace.
-The model must be trained in a separate repository, as source installation of the transformers library is required. Copy the resulting model files into
-serialized_models/inselbert_qa_hf and run `pdm save-qa-model-to-bento` to create a BentoService for the model.
+The model must be trained in a separate repository, as source installation of the transformers library is required. 
+First, generate training data running `pdm generate-dataset-json-for-qa-model`. Copy the folder "./data/protected/qa_json" into the other repository and train the model. 
+Copy the resulting model files into ./serialized_models/inselbert_qa_hf and run `pdm save-qa-model-to-bento` to create a BentoService for the model.
 The model takes a question and a clinical text as input and returns the answer span to the question.
 
 ## Open issues

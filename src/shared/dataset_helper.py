@@ -1,4 +1,4 @@
-from datasets import DatasetDict
+from datasets import DatasetDict, Dataset
 from torch.utils.data import DataLoader
 from transformers import DataCollatorWithPadding
 
@@ -28,6 +28,23 @@ class DatasetHelper:
             }
         )
         return hf_dataset
+
+    @staticmethod
+    def create_data_splits_qa(train_dictlist, eval_test_dictlist):
+        train_dataset = Dataset.from_list(train_dictlist)
+        eval_test_dataset = Dataset.from_list(eval_test_dictlist)
+        eval_test_split_dataset = eval_test_dataset.train_test_split(
+            shuffle=True, seed=200, test_size=0.5
+        )
+        hf_dataset = DatasetDict(
+            {
+                "train": train_dataset,
+                "test": eval_test_split_dataset["test"],
+                "validation": eval_test_split_dataset["train"],
+            }
+        )
+        return hf_dataset
+
 
     # TODO: Replace dataset with key as soon as tokenization is implemented here
     def load_tokenized_dataset(self, tokenized_dataset, shuffle=False):

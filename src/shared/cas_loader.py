@@ -339,10 +339,9 @@ class CASLoader:
 
     def load_CAS_convert_to_offset_dict_qa_train_test_split(self):
         dictlist = self.load_CAS_convert_to_offset_dict()
-        training = dictlist[:int(len(dictlist) * 0.8)]
-        evaluation = dictlist[-int(len(dictlist) * 0.2):]
+        training = dictlist[:int(len(dictlist) * 0.7)]
+        evaluation = dictlist[-int(len(dictlist) * 0.3):]
         train_examples_single = self.load_CAS_convert_to_offset_dict_qa_single_answer(training)
-        eval_examples_multi = self.load_CAS_convert_to_offset_dict_qa_multi_answer(evaluation)
-        # TODO: Split evaluation into evaluation and validation
-        return train_examples_single, eval_examples_multi
+        eval_test_examples_multi = self.load_CAS_convert_to_offset_dict_qa_multi_answer(evaluation)
+        return train_examples_single, eval_test_examples_multi
 
