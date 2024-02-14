@@ -37,10 +37,18 @@ First, generate training data running `pdm generate-dataset-json-for-qa-model`. 
 Copy the resulting model files into ./serialized_models/inselbert_qa_hf and run `pdm save-qa-model-to-bento` to create a BentoService for the model.
 The model takes a question and a clinical text as input and returns the answer span to the question.
 
+## Deployment
+
+To generate a docker image, follow these steps: 
+1) Run `pdm save-qa-model-to-bento` and `pdm save-seq-model-to-bento` to load the serialized models into the local bentoml model store.
+   2) Run `pdm build-bento` to package both models into a so-called Bento.
+3) Run `pdm containerize-bento` to create a docker image from the Bento.
+4) To start a docker container, run `docker run -p 3000:3000 <image-name> bentoml serve --reload`. Notice the `--reload` flag, which is needed due to performance issues in production mode.
+
 ## Open issues
 
 - Context information: How can we integrate context information (which fact was identified, position of anchor, position of fact within wider context) into the model?
-- Fact candidate calculation: Where and how are fact candidates calculated? Is this part of one of the two models?
+- Perfomance drop upon production mode: see https://github.com/bentoml/BentoML/issues/2267
 - Sharing of modifiers: What impact does sharing of modifiers have on performance?
 - Ignore special tokens: Multi-label classification does not automatically ignore -100 tokens when calculating loss. 
 - Merging facts: What impact does merging of facts with the same modifiers have on model performance and structuring? 
