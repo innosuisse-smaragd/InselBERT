@@ -24,7 +24,6 @@ class InferenceFact(BaseModel):
     extracted_entities: object = {}
 
 
-
 class InferenceResponse(BaseModel):
     message: str
     facts: list[InferenceFact]
@@ -45,7 +44,7 @@ def words_overlap(slice1, slice2):
 
 @svc.api(input=JSON(pydantic_model=InferenceRequest),
          output=JSON(pydantic_model=InferenceResponse))
-async def do_inference(request: InferenceRequest, ctx: bentoml.Context) -> InferenceResponse:
+async def infer(request: InferenceRequest, ctx: bentoml.Context) -> InferenceResponse:
     facts = []
     alternatives = []
     if request.fact != "":
@@ -90,41 +89,33 @@ async def do_inference(request: InferenceRequest, ctx: bentoml.Context) -> Infer
         # Merge subword-tokens
         results = []
         prev_tok = None
-        prev_end = 0
-        prev_start = 0
         for tag in extracted_tokens:
             if tag['word'].startswith("##") and prev_tok is not None:
                 prev_tok += tag['word'][2:]
-                prev_end = tag['end']
             else:
                 if prev_tok is not None:
-                    results.append({"word": prev_tok, "tag": prev_tag, "start": prev_start, "end": prev_end})
+                    results.append({"word": prev_tok, "tag": prev_tag})
                 prev_tok = tag['word']
-                prev_end = tag['end']
                 prev_tag = tag['entity']
-                prev_start = tag['start']
+
         if prev_tok is not None:
-            results.append({"word": prev_tok, "tag": prev_tag, "start": prev_start, "end": prev_end})
+            results.append({"word": prev_tok, "tag": prev_tag})
         fact.merged_tokens = results
 
         # Merge B- and I- tags to one tag
         merged_tags = []
         prev_word = None
-        prev_end = 0
-        prev_start = 0
         for tag in fact.merged_tokens:
             if tag['tag'].startswith("I-") and prev_word is not None:
                 prev_word += " " + tag['word']
-                prev_end = tag['end']
+
             else:
                 if prev_word is not None:
-                    merged_tags.append({"word": prev_word, "tag": prev_tag[2:], "start": prev_start, "end": prev_end})
+                    merged_tags.append({"word": prev_word, "tag": prev_tag[2:]})
                 prev_word = tag['word']
                 prev_tag = tag['tag']
-                prev_end = tag['end']
-                prev_start = tag['start']
         if prev_word is not None:
-            merged_tags.append({"word": prev_word, "tag": prev_tag[2:], "start": prev_start, "end": prev_end})
+            merged_tags.append({"word": prev_word, "tag": prev_tag[2:]})
         fact.extracted_entities = merged_tags
     if not facts:
         ctx.response.status_code = 404
