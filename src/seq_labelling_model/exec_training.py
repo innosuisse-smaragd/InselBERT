@@ -17,7 +17,7 @@ import numpy as np
 BATCH_SIZE = 16
 LEARNING_RATE = 5e-5
 WEIGHT_DECAY = 1e-2
-NUM_EPOCHS = 100
+NUM_EPOCHS = 5
 
 config = {
     "batch_size": BATCH_SIZE,
@@ -44,6 +44,8 @@ dataset = Dataset.from_list(dictlist)
 dataset_helper = DatasetHelper(dataset, batch_size=BATCH_SIZE, tokenizer=model_helper.tokenizer)
 torch.manual_seed(0)
 
+print("First entry: ", dataset_helper.dataset["train"][0])
+print("Second entry: ", dataset_helper.dataset["train"][1])
 
 def tokenize_and_align_labels(examples):
     tokenized_inputs = model_helper.tokenizer(examples["tokens"], truncation=True, is_split_into_words=True)
@@ -107,7 +109,8 @@ training_args = TrainingArguments(
     weight_decay=WEIGHT_DECAY,
     evaluation_strategy="epoch",
     save_strategy="epoch",
-    save_total_limit=1
+    save_total_limit=1,
+    report_to="wandb",
 )
 
 trainer = Trainer(
@@ -121,4 +124,8 @@ trainer = Trainer(
 )
 
 trainer.train()
+validation_results = trainer.predict(tokenized_hf_ds["validation"])
+trainer.save_metrics(split="validation", metrics=validation_results.metrics, combined=False)
+
+trainer.create_model_card(language="de", tasks="token-classification", model_name="inselbert-sequence-labeller", tags=["seq_labelling", "medical", "german"])
 wandb_helper.finish()

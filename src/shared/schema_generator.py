@@ -56,14 +56,17 @@ class SchemaGenerator:
             tag_names = [modifier.class_name for modifier in modifiers]
         elif entity == "combined":
             anchors = reasoner.get_entities(AnchorEntity.get_type())
-            tag_names = [anchor.class_name for anchor in anchors]
+            anchor_names = [anchor.class_name for anchor in anchors]
             modifiers = reasoner.get_entities(Modifier.get_type())
-            tag_names += [modifier.class_name for modifier in modifiers]
+            modifier_names = [modifier.class_name for modifier in modifiers]
+            tag_names = anchor_names + modifier_names
 
-        tag_names = set(tag_names) # remove duplicates
-        for index, element in enumerate(tag_names, start=1):
+        tag_names = set(tag_names)  # remove duplicates
+        i = 1
+        for index, element in enumerate(tag_names):
             if element != "":
-                result[element] = index
+                result[element] = i
+                i += 1
 
         return result
 
@@ -78,5 +81,3 @@ class SchemaGenerator:
     @staticmethod
     def inverse_2id(mapping: dict):
         return {v: k for k, v in mapping.items()}
-
-
