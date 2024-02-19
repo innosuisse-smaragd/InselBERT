@@ -8,6 +8,8 @@ from constants import ANNOTATED_REPORTS_PATH
 import pandas
 import re
 
+from shared.schema_generator import SchemaGenerator
+
 
 class DatasetEntry:
     def __init__(
@@ -337,11 +339,22 @@ class CASLoader:
 
         return dictlist_qa
 
-    def load_CAS_convert_to_offset_dict_qa_train_test_split(self):
+    def load_CAS_convert_to_offset_dict_qa_train_test_split(self): # TODO: Check that eval and test set are separated in calling code
         dictlist = self.load_CAS_convert_to_offset_dict()
         training = dictlist[:int(len(dictlist) * 0.7)]
         evaluation = dictlist[-int(len(dictlist) * 0.3):]
         train_examples_single = self.load_CAS_convert_to_offset_dict_qa_single_answer(training)
         eval_test_examples_multi = self.load_CAS_convert_to_offset_dict_qa_multi_answer(evaluation)
         return train_examples_single, eval_test_examples_multi
+
+
+if __name__ == "__main__":
+    schema = SchemaGenerator()
+    loader = CASLoader(ANNOTATED_REPORTS_PATH, schema)
+    reports_qa = loader.load_CAS_convert_to_offset_dict()
+    reports_seq_labelling = loader.load_cas_and_convert_to_dict_list()
+    print("QA_format", reports_qa[0])
+    print("SEQ_format",reports_seq_labelling[0])
+
+
 

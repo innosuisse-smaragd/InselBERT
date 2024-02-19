@@ -220,8 +220,8 @@ args = TrainingArguments(
     num_train_epochs=3,
     weight_decay=0.01
 )
-#model = AutoModelForQuestionAnswering.from_pretrained(constants.PRETRAINED_MODEL_PATH)
-model = AutoModelForQuestionAnswering.from_pretrained("./serialized_models/inselbert_qa/checkpoint-963")
+model = AutoModelForQuestionAnswering.from_pretrained(constants.PRETRAINED_MODEL_PATH)
+#model = AutoModelForQuestionAnswering.from_pretrained("./serialized_models/inselbert_qa/checkpoint-963")
 model.to(model_helper.device)
 trainer = Trainer(
     model= model,
@@ -231,9 +231,4 @@ trainer = Trainer(
     tokenizer=tokenizer,
 )
 
-#trainer.train()
-
-predictions, _, _ = trainer.predict(validation_dataset)
-start_logits, end_logits = predictions
-result = compute_metrics(start_logits, end_logits, validation_dataset, hf_dataset["validation"])
-print(result)
+trainer.train()

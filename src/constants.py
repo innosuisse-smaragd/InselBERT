@@ -14,8 +14,11 @@ SEQ_LABELLING_MODEL_NAME = "inselbert_seq_labelling"
 PRETRAINED_MODEL_PATH = "./serialized_models/inselbert/"
 F_A_EXTRACTION_MODEL_PATH = "./serialized_models/" + F_A_EXTRACTION_MODEL_NAME + "/"
 M_EXTRACTION_MODEL_PATH = "./serialized_models/" + M_EXTRACTION_MODEL_NAME + "/"
+QA_MODEL_PATH = "./serialized_models/" + QA_MODEL_NAME + "/"
 QA_HF_MODEL_PATH = "./serialized_models/" + QA_HF_MODEL_NAME + "/"
 SEQ_LABELLING_MODEL_PATH = "./serialized_models/" + SEQ_LABELLING_MODEL_NAME + "/"
+
+TOKENIZER_ABBREVIATIONS_FILE = "./data/ID-abbreviation-list.txt"
 
 BENTO_NAME = "inselbertfactextractor"
 LABEL_ALL_TOKENS = True
