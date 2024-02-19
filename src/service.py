@@ -6,6 +6,8 @@ from pydantic import BaseModel
 
 import constants
 
+from shared.smaragd_tokenizer import SmaragdTokenizer
+
 
 class InferenceRequest(BaseModel):
     reportText: str
@@ -45,6 +47,11 @@ def words_overlap(slice1, slice2):
 @svc.api(input=JSON(pydantic_model=InferenceRequest),
          output=JSON(pydantic_model=InferenceResponse))
 async def infer(request: InferenceRequest, ctx: bentoml.Context) -> InferenceResponse:
+
+    # Step 0: Tokenize report text with the Smaragd tokenizer
+    smaragd_tokenizer = SmaragdTokenizer()
+    tokenized_report_text = " ".join(smaragd_tokenizer.tokenize(request.reportText))
+    print(tokenized_report_text)
     facts = []
     alternatives = []
     if request.fact != "":
@@ -53,7 +60,7 @@ async def infer(request: InferenceRequest, ctx: bentoml.Context) -> InferenceRes
         fact_definitions = constants.FACT_DEFINITIONS
     for fact_definition in fact_definitions:
     # Step 1: Extract facts from the report by extractive question answering
-        answers = await qa_runner.async_run(question=fact_definition, context=request.reportText, top_k=3, handle_impossible_answer=True)
+        answers = await qa_runner.async_run(question=fact_definition, context=tokenized_report_text, top_k=3, handle_impossible_answer=True)
         print("Raw answers: ",answers)
 
 

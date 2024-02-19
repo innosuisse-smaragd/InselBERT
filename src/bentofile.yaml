@@ -2,6 +2,7 @@ service: "service.py:svc"
 include:
   - "service.py"
   - "constants.py"
+  - "shared/"
 python:
   packages:
   - transformers
@@ -9,3 +10,4 @@ python:
   - numpy
   - pandas
   - pydantic
+  - spacy
