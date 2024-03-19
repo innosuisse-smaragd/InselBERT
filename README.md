@@ -39,16 +39,54 @@ The model takes a question and a clinical text as input and returns the answer s
 
 ## Deployment
 
+### Inference API Server: Bentoml
 To generate a docker image, follow these steps: 
 1) Run `pdm save-qa-model-to-bento` and `pdm save-seq-model-to-bento` to load the serialized models into the local bentoml model store.
    2) Run `pdm build-bento` to package both models into a so-called Bento.
 3) Run `pdm containerize-bento` to create a docker image from the Bento.
 4) To start a docker container, run `docker run -p 3000:3000 <image-name> bentoml serve --reload`. Notice the `--reload` flag, which is needed due to performance issues in production mode.
+5) (Internal deployment: Re-tag image with tag ":inference" and push to gitlab registry, then pull image from portainer)
+
+
+### UI: Streamlit app 
+1) Export dependencies with `pdm export -o requirements.txt --without-hashes` (only if changes were done)
+2) Make sure that references to serialized models in `streamlit_app.py` are up-to-date
+3) Deployment:
+   - Internal: Push to gitlab to trigger the CI/CD pipeline building a docker container
+   - External: Run `streamlit run streamlit_app.py` to start the app locally
+   - External: Build a docker image with `docker build -t inselbertExtractor .` and run it with `docker run -p 8501:8501 inselbertExtractor` 
+
+### Evaluation
+
+#### Comparison between inselBERT and MedBERT.de
+
+   Metric: McNemar test.
+
+1) Fine-tune two models each for question answering and sequence labelling
+2) 
+
+#### (Cross-validation of question answering model)
+
+#### Cross-validation of sequence labelling model
+
+- Train k models by generating folds of training data
+- Evaluate all models on the same validation data using HF evaluation
+#### Evaluation of question answering model
+- Metric: squad_v2 (including no_answer metric)
+   - Bootstrap of validation data set 
+   - run ... 
+
+#### Evaluation of sequence labelling model
+- Metric: seqeval
+   - Make sure to have a trained model in the serialized_models folder
+   - Bootstrap of validation data set
+   - run `pdm evaluate-seq-model` to evaluate the sequence labelling model
+Output: 
 
 ## Open issues
 
 - Context information: How can we integrate context information (which fact was identified, position of anchor, position of fact within wider context) into the model?
-- Perfomance drop upon production mode: see https://github.com/bentoml/BentoML/issues/2267
+- Performance drop upon production mode: see https://github.com/bentoml/BentoML/issues/2267
 - Sharing of modifiers: What impact does sharing of modifiers have on performance?
 - Ignore special tokens: Multi-label classification does not automatically ignore -100 tokens when calculating loss. 
 - Merging facts: What impact does merging of facts with the same modifiers have on model performance and structuring? 

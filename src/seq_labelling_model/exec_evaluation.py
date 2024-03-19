@@ -31,7 +31,7 @@ dataset_helper = DatasetHelper(dataset, tokenizer=model_helper.tokenizer)
 task_evaluator = evaluator("token-classification")
 
 eval_results = task_evaluator.compute(
-    model_or_pipeline=constants.SEQ_LABELLING_MODEL_PATH,
+    model_or_pipeline=constants.SEQ_LABELLING_MODEL_PATH + "checkpoint-610",
     data=dataset_helper.dataset["validation"],
     metric="seqeval",
     label_column="tags",

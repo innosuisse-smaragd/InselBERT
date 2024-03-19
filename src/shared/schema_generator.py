@@ -31,11 +31,6 @@ class SchemaGenerator:
         self.id2label_modifiers = self.inverse_2id(self.label2id_modifiers)
         self.id2label_combined = self.inverse_2id(self.label2id_combined)
 
-        print("Anchors: ", self.id2label_anchors)
-        print("Facts: ", self.id2label_facts)
-        print("Modifiers: ", self.id2label_modifiers)
-        print("Combined: ", self.id2label_combined)
-
     @staticmethod
     def get_tag2id(entity):
         tag_names = []
@@ -60,14 +55,14 @@ class SchemaGenerator:
             modifiers = reasoner.get_entities(Modifier.get_type())
             modifier_names = [modifier.class_name for modifier in modifiers]
             tag_names = anchor_names + modifier_names
-
-        tag_names = set(tag_names)  # remove duplicates
+        if constants.FILTER_ENTITIES:
+            tag_names = [tag for tag in tag_names if tag not in constants.ENTITIES_TO_IGNORE]
+        tag_names = set(tag_names) # remove duplicates
         i = 1
         for index, element in enumerate(tag_names):
             if element != "":
                 result[element] = i
                 i += 1
-
         return result
 
     @staticmethod
@@ -81,3 +76,8 @@ class SchemaGenerator:
     @staticmethod
     def inverse_2id(mapping: dict):
         return {v: k for k, v in mapping.items()}
+
+if __name__ == "__main__":
+    schema = SchemaGenerator()
+    print(schema.tag2id_anchorsModifiers)
+    print(schema.id2label_combined)

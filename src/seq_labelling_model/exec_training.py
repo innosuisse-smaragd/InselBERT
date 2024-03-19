@@ -3,7 +3,7 @@ import evaluate
 import torch
 
 from transformers import AutoModelForTokenClassification, DataCollatorForTokenClassification, \
-    TrainingArguments, Trainer
+    TrainingArguments, Trainer, EarlyStoppingCallback
 
 import constants
 from shared.cas_loader import CASLoader
@@ -17,7 +17,7 @@ import numpy as np
 BATCH_SIZE = 16
 LEARNING_RATE = 5e-5
 WEIGHT_DECAY = 1e-2
-NUM_EPOCHS = 5
+NUM_EPOCHS = 100
 
 config = {
     "batch_size": BATCH_SIZE,
@@ -41,6 +41,10 @@ for entry in extracted_facts_with_combined_tags:
 
 
 dataset = Dataset.from_list(dictlist)
+#https://huggingface.co/docs/datasets/v2.12.0/en/loading#slice-splits
+#val_ds = Dataset.from_list(dictlist, split=[f"train[{k}%:{k+10}%]" for k in range(0, 100, 10)])
+#train_ds = Dataset.from_list(dictlist, split=[f"train[:{k}%]+train[{k+10}%:]" for k in range(0, 100, 10)])
+
 dataset_helper = DatasetHelper(dataset, batch_size=BATCH_SIZE, tokenizer=model_helper.tokenizer)
 torch.manual_seed(0)
 
@@ -71,6 +75,7 @@ def tokenize_and_align_labels(examples):
 print("First train set entry: ", dataset_helper.dataset["train"][0])
 
 tokenized_hf_ds = dataset_helper.dataset.map(tokenize_and_align_labels, batched=True)
+
 
 print("First tokenized and shuffled train set entry: ",tokenized_hf_ds["train"][0])
 
@@ -109,8 +114,10 @@ training_args = TrainingArguments(
     weight_decay=WEIGHT_DECAY,
     evaluation_strategy="epoch",
     save_strategy="epoch",
-    save_total_limit=1,
+    save_total_limit=5,
     report_to="wandb",
+    load_best_model_at_end=True,
+    metric_for_best_model="eval_f1"
 )
 
 trainer = Trainer(
@@ -121,6 +128,7 @@ trainer = Trainer(
     tokenizer=model_helper.tokenizer,
     data_collator=data_collator,
     compute_metrics=compute_metrics,
+    callbacks = [EarlyStoppingCallback(early_stopping_patience = 3)]
 )
 
 trainer.train()

@@ -4,6 +4,8 @@ from pathlib import Path
 from smaragd_shared_python.annotation.document import Document
 from smaragd_shared_python.annotation.document_parser import DocumentParser
 from smaragd_shared_python.annotation.uima_util import UIMAUtil
+
+import constants
 from constants import ANNOTATED_REPORTS_PATH
 import pandas
 import re
@@ -248,14 +250,18 @@ class CASLoader:
                             combined_tags = "O"
                     else:
                         if encode:
-                            combined_tags = self.schema.label2id_combined[modifiers[0]]
+                            combined_tags = self.schema.label2id_combined.get(modifiers[0])
                         else:
                             combined_tags = modifiers[0]
+
                     if not len(anchors) == 0:
                         if encode:
-                            combined_tags = self.schema.label2id_combined[anchors[0]] # put first (and only) anchor tag in modifier tag
+                            combined_tags = self.schema.label2id_combined.get(anchors[0]) # put first (and only) anchor tag in modifier tag
                         else:
                             combined_tags = anchors[0]
+
+                    if combined_tags is None:
+                        combined_tags = 0 if encode else "O"
 
                     if tag.startswith("B-"):  # new fact type
                         if fact_type in span_prototypes.keys():  # there is already a prototype for this fact type
@@ -345,15 +351,25 @@ class CASLoader:
         evaluation = dictlist[-int(len(dictlist) * 0.3):]
         train_examples_single = self.load_CAS_convert_to_offset_dict_qa_single_answer(training)
         eval_test_examples_multi = self.load_CAS_convert_to_offset_dict_qa_multi_answer(evaluation)
+        print("train examples before filtering: ", len(train_examples_single))
+        print("eval examples before filtering: ", len(eval_test_examples_multi))
+        if constants.FILTER_ENTITIES:
+            train_examples_single = [entry for entry in train_examples_single if
+                                     entry["question"] not in constants.ENTITIES_TO_IGNORE]
+            eval_test_examples_multi = [entry for entry in eval_test_examples_multi if
+                                        entry["question"] not in constants.ENTITIES_TO_IGNORE]
+        print("train examples after filtering: ", len(train_examples_single))
+        print("eval examples after filtering: ", len(eval_test_examples_multi))
         return train_examples_single, eval_test_examples_multi
 
 
 if __name__ == "__main__":
     schema = SchemaGenerator()
     loader = CASLoader(ANNOTATED_REPORTS_PATH, schema)
-    reports_qa = loader.load_CAS_convert_to_offset_dict()
+    train_list, test_valid_list = loader.load_CAS_convert_to_offset_dict_qa_train_test_split()
     reports_seq_labelling = loader.load_cas_and_convert_to_dict_list()
-    print("QA_format", reports_qa[0])
+    print("QA_format_single", train_list[0])
+    print("QA_format_multi", test_valid_list[0])
     print("SEQ_format",reports_seq_labelling[0])
 
 
