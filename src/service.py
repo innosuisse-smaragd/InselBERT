@@ -50,7 +50,7 @@ async def infer(request: InferenceRequest, ctx: bentoml.Context) -> InferenceRes
     if request.fact != "":
         fact_definitions = [request.fact]
     else:
-        fact_definitions = constants.FACT_DEFINITIONS
+        fact_definitions = constants.FILTERED_FACT_DEFINITIONS
     for fact_definition in fact_definitions:
     # Step 1: Extract facts from the report by extractive question answering
         answers = await qa_runner.async_run(question=fact_definition, context=request.reportText, top_k=3, handle_impossible_answer=True)

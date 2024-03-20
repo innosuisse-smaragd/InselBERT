@@ -59,7 +59,7 @@ Copy your dummy report text, extract all available facts or choose one or multip
 """)
 
 
-facts_list = constants.FACT_DEFINITIONS
+facts_list = constants.FILTERED_FACT_DEFINITIONS
 
 toggle = st.sidebar.toggle('Extract all facts', True)
 
@@ -79,7 +79,7 @@ if st.button("Extract facts"):
     print(report_text)
     with st.spinner('Extracting facts...'):
         if toggle:
-            fact_definitions = constants.FACT_DEFINITIONS
+            fact_definitions = constants.FILTERED_FACT_DEFINITIONS
         else:
             fact_definitions = fact_names
         for fact_names in fact_definitions:

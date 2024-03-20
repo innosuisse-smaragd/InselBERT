@@ -43,18 +43,29 @@ class SchemaGenerator:
         if entity == "facts":
             facts = reasoner.get_entities(Fact.get_type())
             tag_names = [fact.class_name for fact in facts]
+            # only include tags that annotations are available for
+            tag_names = [tag for tag in tag_names if tag in constants.AVAILABLE_FACTS.keys()]
         elif entity == "anchors":
             anchors = reasoner.get_entities(AnchorEntity.get_type())
             tag_names = [anchor.class_name for anchor in anchors]
+            # only include tags that annotations are available for
+            tag_names = [tag for tag in tag_names if tag in constants.AVAILABLE_ANCHORS.keys()]
         elif entity == "modifiers":
             modifiers = reasoner.get_entities(Modifier.get_type())
             tag_names = [modifier.class_name for modifier in modifiers]
+            # only include tags that annotations are available for
+            tag_names = [tag for tag in tag_names if tag in constants.AVAILABLE_MODIFIERS.keys()]
         elif entity == "combined":
             anchors = reasoner.get_entities(AnchorEntity.get_type())
             anchor_names = [anchor.class_name for anchor in anchors]
+            # only include tags that annotations are available for
+            anchor_names = [tag for tag in anchor_names if tag in constants.AVAILABLE_ANCHORS.keys()]
             modifiers = reasoner.get_entities(Modifier.get_type())
             modifier_names = [modifier.class_name for modifier in modifiers]
+            # only include tags that annotations are available for
+            modifier_names = [tag for tag in modifier_names if tag in constants.AVAILABLE_MODIFIERS.keys()]
             tag_names = anchor_names + modifier_names
+        # filter out entities with less than 20 annotations acc. to constants.py
         if constants.FILTER_ENTITIES:
             tag_names = [tag for tag in tag_names if tag not in constants.ENTITIES_TO_IGNORE]
         tag_names = set(tag_names) # remove duplicates
@@ -79,5 +90,8 @@ class SchemaGenerator:
 
 if __name__ == "__main__":
     schema = SchemaGenerator()
+    print("Modifiers: ", schema.tag2id_modifiers)
+    print("Anchors: ", schema.tag2id_anchors)
+    print("Facts: ", schema.tag2id_facts)
     print(schema.tag2id_anchorsModifiers)
     print(schema.id2label_combined)

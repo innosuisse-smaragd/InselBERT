@@ -367,10 +367,10 @@ if __name__ == "__main__":
     schema = SchemaGenerator()
     loader = CASLoader(ANNOTATED_REPORTS_PATH, schema)
     train_list, test_valid_list = loader.load_CAS_convert_to_offset_dict_qa_train_test_split()
-    reports_seq_labelling = loader.load_cas_and_convert_to_dict_list()
+    examples_seq_labelling = loader.load_CAS_convert_to_combined_tag_list_seq_labelling()
     print("QA_format_single", train_list[0])
     print("QA_format_multi", test_valid_list[0])
-    print("SEQ_format",reports_seq_labelling[0])
+    print("SEQ_format",examples_seq_labelling[0])
 
 
 

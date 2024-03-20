@@ -45,8 +45,6 @@ class DatasetHelper:
         )
         return hf_dataset
 
-
-    # TODO: Replace dataset with key as soon as tokenization is implemented here
     def load_tokenized_dataset(self, tokenized_dataset, shuffle=False):
         return DataLoader(tokenized_dataset, batch_size=self.batch_size, shuffle=shuffle, collate_fn=self.data_collator)
 
