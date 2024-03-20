@@ -27,11 +27,12 @@ dev = [
     "accelerate>=0.21.0",
     "wandb>=0.15.7",
     "plotly>=5.19.0",
+    "pytest>=8.1.1",
 ]
 
 [tool.pdm.scripts] # See: https://pdm.fming.dev/2.7/usage/scripts/
 lint = {cmd = "pycodestyle ./src ./test --max-line-length 120"}
-# test = {cmd = "pytest"}
+test = {cmd = "pytest"}
 check-import-order = {cmd = "isort ./src ./test --check-only"}
 fix-import-order = {cmd = "isort ./src ./test"}
 
