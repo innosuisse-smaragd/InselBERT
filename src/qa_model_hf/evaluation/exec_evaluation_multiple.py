@@ -2,6 +2,7 @@ import pandas as pd
 from evaluate import evaluator
 
 import plotly.graph_objs as go
+import plotly.express as px
 import constants
 from shared.cas_loader import CASLoader
 from shared.dataset_helper import DatasetHelper
@@ -15,10 +16,8 @@ dataset_qa_train_test_valid = DatasetHelper.create_data_splits_qa(train_dictlist
 validation_set = dataset_qa_train_test_valid["validation"]
 
 models = [
-    constants.QA_HF_MODEL_PATH + "checkpoint-hf",
-    constants.QA_MODEL_PATH + "checkpoint-283",
-    constants.QA_MODEL_PATH + "checkpoint-849",
-
+    "./serialized_models/inselbert_qa_hf/inselbert_qa_hf_240319",
+    "./serialized_models/inselbert_qa_hf/medbert_de_qa_hf_240319",
 ]
 
 task_evaluator = evaluator("question-answering")
@@ -36,11 +35,49 @@ df = pd.DataFrame(results, index=models)
 df = df[["exact", "f1", "total", "HasAns_exact", "HasAns_f1", "HasAns_total","best_exact", "best_exact_thresh","best_f1", "best_f1_thresh","total_time_in_seconds", "samples_per_second", "latency_in_seconds"]]
 df.to_csv(constants.QA_HF_MODEL_PATH + "evaluation_results/" + "results.csv")
 
-for col in df.columns:
-    fig = go.Figure()
-    for model, row in df.iterrows():
-        fig.add_trace(go.Bar(x=[model], y=[row[col]], name=model))
-    fig.update_layout(title=f'Stacked Bar Chart for {col}', barmode='stack')
-    fig.write_html(constants.QA_HF_MODEL_PATH + "evaluation_results/" + f"stacked_bar_chart_{col}.html")
+
+df.drop(columns=["total", "HasAns_total", "best_exact_thresh", "best_f1_thresh","total_time_in_seconds", "samples_per_second", "latency_in_seconds"], inplace=True)
+
+
+
+models = df.index
+metrics = df.columns
+
+
+short_model_names = {
+    './serialized_models/inselbert_qa_hf/inselbert_qa_hf_240319': 'InselBERT',
+    './serialized_models/inselbert_qa_hf/medbert_de_qa_hf_240319': 'medBERT-de'
+}
+# Define color mapping for models
+color_mapping = {'./serialized_models/inselbert_qa_hf/inselbert_qa_hf_240319': 'blue', './serialized_models/inselbert_qa_hf/medbert_de_qa_hf_240319': 'red'}
+
+# Reshape data for Plotly Express
+df_melted = df.reset_index().melt(id_vars='index', var_name='Metric', value_name='Value')
+
+# Replace long model names with shorter ones
+df_melted['index'] = df_melted['index'].map(short_model_names)
+
+# Update color mapping with shorter model names
+color_mapping_short = {short_model_names[k]: v for k, v in color_mapping.items()}
+
+# Plot figure with customizations
+fig = px.bar(df_melted, x='Metric', y='Value', color='index', barmode='group', color_discrete_map=color_mapping_short,
+             category_orders={"index": short_model_names.values()},
+             labels={'index': 'Model', 'Value': 'Metric Values', 'Metric': 'Metrics'})
+
+# Adjust legend position and font size
+fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=12)),
+                  xaxis_title='Metrics', yaxis_title='Metric Values', font=dict(size=12))
+
+# Adjust plot size
+fig.update_layout(width=800, height=500)
+
+fig.show()
+
+fig.write_html("grouped_bar_chart.html")
+
+
+
+
 
 

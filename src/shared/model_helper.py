@@ -26,7 +26,9 @@ class ModelHelper:
         elif modeltype == constants.QA_MODEL_NAME:
             self.model = self.get_further_pretrained_model_for_qa()
         elif modeltype == constants.SEQ_LABELLING_MODEL_NAME:
-            self.model = self.get_further_pretrained_model_for_sequence_labelling()
+            self.model = self.get_model_for_sequence_labelling(constants.PRETRAINED_MODEL_PATH)
+        elif modeltype == constants.BASE_MODEL_NAME:
+            self.model = self.get_model_for_sequence_labelling(constants.BASE_MODEL_NAME)
         self.model.to(self.device)
 
 
@@ -71,10 +73,10 @@ class ModelHelper:
         )
         return model
 
-    def get_further_pretrained_model_for_sequence_labelling(self):
+    def get_model_for_sequence_labelling(self, modeltype):
 
         model = self.model_def.from_pretrained(
-            constants.PRETRAINED_MODEL_PATH,
+            modeltype,
             num_labels=self.num_labels,
             label2id=self.schema.label2id_combined,
             id2label=self.schema.id2label_combined

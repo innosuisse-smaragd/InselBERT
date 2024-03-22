@@ -1,5 +1,5 @@
 # https://huggingface.co/docs/evaluate/base_evaluator#token-classification
-
+import pandas as pd
 from datasets import load_dataset, Dataset
 from evaluate import evaluator
 from transformers import AutoModelForTokenClassification
@@ -9,7 +9,7 @@ from shared.cas_loader import CASLoader
 from shared.dataset_helper import DatasetHelper
 from shared.model_helper import ModelHelper
 from shared.schema_generator import SchemaGenerator
-import matplotlib.pyplot as plt
+import plotly.graph_objs as go
 
 
 schema = SchemaGenerator()
@@ -31,7 +31,7 @@ dataset_helper = DatasetHelper(dataset, tokenizer=model_helper.tokenizer)
 task_evaluator = evaluator("token-classification")
 
 eval_results = task_evaluator.compute(
-    model_or_pipeline=constants.SEQ_LABELLING_MODEL_PATH + "checkpoint-610",
+    model_or_pipeline=constants.SEQ_LABELLING_MODEL_PATH + "20240322-162537_medbert/",
     data=dataset_helper.dataset["validation"],
     metric="seqeval",
     label_column="tags",
@@ -39,21 +39,27 @@ eval_results = task_evaluator.compute(
     #n_resamples=30,
 )
 
-print(eval_results)
-data = eval_results
 
+# Assuming eval_results is a dictionary containing evaluation results
+# Convert it to a DataFrame for better handling
+df = pd.DataFrame(eval_results)
 
-# Separate keys and values for better visualization
-bar_keys = [key for key in data if isinstance(data[key], dict)]
-bar_values = [data[key]['f1'] if isinstance(data[key], dict) and 'f1' in data[key] else None for key in bar_keys]
+# Assuming eval_results contains the F1 scores as 'f1' keys
+# Extract keys and corresponding F1 scores
+bar_keys = [key for key in eval_results if isinstance(eval_results[key], dict) and 'f1' in eval_results[key]]
+bar_values = [eval_results[key]['f1'] for key in bar_keys]
 
+# Sort the keys and values based on F1 scores in descending order
+sorted_data = sorted(zip(bar_keys, bar_values), key=lambda x: x[1], reverse=True)
+sorted_keys, sorted_values = zip(*sorted_data)
 
-# Create bar plot for F1 scores
-plt.bar(bar_keys, bar_values, color='skyblue')
-plt.xlabel('Key')
-plt.ylabel('F1 Score')
-plt.title('F1 Scores for Different Keys')
-plt.xticks(rotation=90)
-plt.tight_layout()
-plt.savefig("f1_scores.png")
+# Create a Plotly bar chart
+fig = go.Figure(data=[go.Bar(x=sorted_keys, y=sorted_values, marker_color='skyblue')])
+fig.update_layout(xaxis=dict(tickangle=-45),
+                  yaxis=dict(title='F1 Score'),
+                  title='F1 Scores for Different Keys',
+                  plot_bgcolor='rgba(0,0,0,0)')
+fig.show()
+fig.write_html(constants.SEQ_LABELLING_MODEL_PATH + "evaluation_results/" + "f1_scores.html")
+
 

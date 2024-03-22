@@ -242,6 +242,13 @@ class CASLoader:
                     token = doc["text"][i]
                     anchors = doc["anchor_tags"][i]
                     modifiers = doc["modifier_tags"][i]
+                    # Filter out entities with n < 20
+                    for anchor in anchors:
+                        if anchor[2:] in constants.ENTITIES_TO_IGNORE:
+                            anchors.remove(anchor)
+                    for modifier in modifiers:
+                        if modifier[2:] in constants.ENTITIES_TO_IGNORE:
+                            modifiers.remove(modifier)
 
                     if len(modifiers) == 0:
                         if encode:

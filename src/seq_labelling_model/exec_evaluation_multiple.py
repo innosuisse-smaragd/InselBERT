@@ -22,14 +22,15 @@ dataset = Dataset.from_list(dictlist)
 dataset_helper = DatasetHelper(dataset, tokenizer=model_helper.tokenizer)
 
 models = [
-    constants.SEQ_LABELLING_MODEL_PATH + "checkpoint-366/",
-    constants.SEQ_LABELLING_MODEL_PATH + "checkpoint-488/",
-    constants.SEQ_LABELLING_MODEL_PATH + "checkpoint-610/",
+    constants.SEQ_LABELLING_MODEL_PATH + "20240322-163117_inselbert/",
+    constants.SEQ_LABELLING_MODEL_PATH + "20240322-162537_medbert/",
 ]
 
 task_evaluator = evaluator("token-classification")
 
 results = []
+
+print("Starting evaluation")
 for model in models:
     results.append(
         task_evaluator.compute(
@@ -39,7 +40,7 @@ for model in models:
 
 df = pd.DataFrame(results, index=models)
 
-df = df[["overall_f1", "overall_accuracy", "total_time_in_seconds", "samples_per_second", "latency_in_seconds"]]
+df = df[["overall_f1", "overall_accuracy", "overall_precision", "overall_recall"]]
 df.to_csv(constants.SEQ_LABELLING_MODEL_PATH + "evaluation_results/" + "results.csv")
 
 # Create a list of colors for better visualization

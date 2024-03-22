@@ -1,4 +1,6 @@
 #https://huggingface.co/docs/transformers/tasks/token_classification
+from datetime import datetime
+
 import evaluate
 import torch
 
@@ -82,27 +84,25 @@ print("First tokenized and shuffled train set entry: ",tokenized_hf_ds["train"][
 data_collator = DataCollatorForTokenClassification(tokenizer=model_helper.tokenizer)
 
 seqeval = evaluate.load("seqeval")
-label_list = list(schema.id2label_combined.values())
+label_names = list(schema.id2label_combined.values())
 
-def compute_metrics(p):
-    predictions, labels = p
-    predictions = np.argmax(predictions, axis=2)
+def compute_metrics(eval_preds):
+    logits, labels = eval_preds
+    predictions = np.argmax(logits, axis=-1)
 
+    # Remove ignored index (special tokens) and convert to labels
+    true_labels = [[label_names[l] for l in label if l != -100] for label in labels]
     true_predictions = [
-        [label_list[p] for (p, l) in zip(prediction, label) if l != -100]
+        [label_names[p] for (p, l) in zip(prediction, label) if l != -100]
         for prediction, label in zip(predictions, labels)
     ]
-    true_labels = [
-        [label_list[l] for (p, l) in zip(prediction, label) if l != -100]
-        for prediction, label in zip(predictions, labels)
-    ]
-
-    results = seqeval.compute(predictions=true_predictions, references=true_labels)
+    all_metrics = seqeval.compute(predictions=true_predictions, references=true_labels)
     return {
-        "precision": results["overall_precision"],
-        "recall": results["overall_recall"],
-        "f1": results["overall_f1"],
-        "accuracy": results["overall_accuracy"],
+        "precision": all_metrics["overall_precision"],
+        "recall": all_metrics["overall_recall"],
+        "f1": all_metrics["overall_f1"],
+        "accuracy": all_metrics["overall_accuracy"],
+        **all_metrics
     }
 
 training_args = TrainingArguments(
@@ -114,10 +114,10 @@ training_args = TrainingArguments(
     weight_decay=WEIGHT_DECAY,
     evaluation_strategy="epoch",
     save_strategy="epoch",
-    save_total_limit=5,
+    save_total_limit=1,
     report_to="wandb",
     load_best_model_at_end=True,
-    metric_for_best_model="eval_f1"
+    metric_for_best_model="eval_precision"
 )
 
 trainer = Trainer(
@@ -128,7 +128,7 @@ trainer = Trainer(
     tokenizer=model_helper.tokenizer,
     data_collator=data_collator,
     compute_metrics=compute_metrics,
-    callbacks = [EarlyStoppingCallback(early_stopping_patience = 3)]
+    callbacks = [EarlyStoppingCallback(early_stopping_patience = 5)]
 )
 
 trainer.train()
@@ -136,4 +136,5 @@ validation_results = trainer.predict(tokenized_hf_ds["validation"])
 trainer.save_metrics(split="validation", metrics=validation_results.metrics, combined=False)
 
 trainer.create_model_card(language="de", tasks="token-classification", model_name="inselbert-sequence-labeller", tags=["seq_labelling", "medical", "german"])
+trainer.save_model(constants.SEQ_LABELLING_MODEL_PATH + datetime.now().strftime("%Y%m%d-%H%M%S") + "/")
 wandb_helper.finish()
