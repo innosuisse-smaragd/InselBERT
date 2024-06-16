@@ -13,7 +13,7 @@ from shared.dataset_helper import DatasetHelper
 from shared.model_helper import ModelHelper
 from shared.schema_generator import SchemaGenerator
 from shared.wandb_helper import WandbHelper
-from datasets import Dataset
+from datasets import Dataset, load_dataset
 import numpy as np
 
 BATCH_SIZE = 16
@@ -43,16 +43,12 @@ for entry in extracted_facts_with_combined_tags:
 
 
 dataset = Dataset.from_list(dictlist)
-#https://huggingface.co/docs/datasets/v2.12.0/en/loading#slice-splits
-#val_ds = Dataset.from_list(dictlist, split=[f"train[{k}%:{k+10}%]" for k in range(0, 100, 10)])
-#train_ds = Dataset.from_list(dictlist, split=[f"train[:{k}%]+train[{k+10}%:]" for k in range(0, 100, 10)])
+
 
 dataset_helper = DatasetHelper(dataset, batch_size=BATCH_SIZE, tokenizer=model_helper.tokenizer)
 torch.manual_seed(0)
 
-print("First entry: ", dataset_helper.dataset["train"][0])
-print("Second entry: ", dataset_helper.dataset["train"][1])
-
+# FIXME: Perform tokenization and aligment before creating cross validation sets
 def tokenize_and_align_labels(examples):
     tokenized_inputs = model_helper.tokenizer(examples["tokens"], truncation=True, is_split_into_words=True)
 
@@ -74,12 +70,12 @@ def tokenize_and_align_labels(examples):
     tokenized_inputs["labels"] = labels
     return tokenized_inputs
 
-print("First train set entry: ", dataset_helper.dataset["train"][0])
+tokenized_dataset_dicts = []
+for dataset_dict in dataset_helper.cross_validated_datasets:
+    tokenized_hf_ds = dataset_dict.map(tokenize_and_align_labels, batched=True)
+    tokenized_dataset_dicts.append(tokenized_hf_ds)
 
-tokenized_hf_ds = dataset_helper.dataset.map(tokenize_and_align_labels, batched=True)
-
-
-print("First tokenized and shuffled train set entry: ",tokenized_hf_ds["train"][0])
+print(tokenized_dataset_dicts)
 
 data_collator = DataCollatorForTokenClassification(tokenizer=model_helper.tokenizer)
 
@@ -105,36 +101,37 @@ def compute_metrics(eval_preds):
         **all_metrics
     }
 
-training_args = TrainingArguments(
-    output_dir=constants.SEQ_LABELLING_MODEL_PATH,
-    learning_rate=LEARNING_RATE,
-    per_device_train_batch_size=BATCH_SIZE,
-    per_device_eval_batch_size=BATCH_SIZE,
-    num_train_epochs=NUM_EPOCHS,
-    weight_decay=WEIGHT_DECAY,
-    evaluation_strategy="epoch",
-    save_strategy="epoch",
-    save_total_limit=1,
-    report_to="wandb",
-    load_best_model_at_end=True,
-    metric_for_best_model="eval_precision"
-)
 
-trainer = Trainer(
-    model=model_helper.model,
-    args=training_args,
-    train_dataset=tokenized_hf_ds["train"],
-    eval_dataset=tokenized_hf_ds["test"],
-    tokenizer=model_helper.tokenizer,
-    data_collator=data_collator,
-    compute_metrics=compute_metrics,
-    callbacks = [EarlyStoppingCallback(early_stopping_patience = 5)]
-)
+for index, tokenized_hf_ds in enumerate(tokenized_dataset_dicts):
+    training_args = TrainingArguments(
+        output_dir=constants.SEQ_LABELLING_MODEL_PATH + datetime.now().strftime("%Y%m%d-%H%M%S") + "_CV" + str(index) + "/",
+        learning_rate=LEARNING_RATE,
+        per_device_train_batch_size=BATCH_SIZE,
+        per_device_eval_batch_size=BATCH_SIZE,
+        num_train_epochs=NUM_EPOCHS,
+        weight_decay=WEIGHT_DECAY,
+        evaluation_strategy="epoch",
+        save_strategy="epoch",
+        save_total_limit=1,
+        report_to="wandb",
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_precision"
+    )
+    trainer = Trainer(
+        model=model_helper.model,
+        args=training_args,
+        train_dataset=tokenized_hf_ds["train"],
+        eval_dataset=tokenized_hf_ds["test"],
+        tokenizer=model_helper.tokenizer,
+        data_collator=data_collator,
+        compute_metrics=compute_metrics,
+        callbacks = [EarlyStoppingCallback(early_stopping_patience = 5)]
+    )
 
-trainer.train()
-validation_results = trainer.predict(tokenized_hf_ds["validation"])
-trainer.save_metrics(split="validation", metrics=validation_results.metrics, combined=False)
+    trainer.train()
+    validation_results = trainer.predict(tokenized_hf_ds["validation"])
+    trainer.save_metrics(split="validation", metrics=validation_results.metrics, combined=False)
 
-trainer.create_model_card(language="de", tasks="token-classification", model_name="inselbert-sequence-labeller", tags=["seq_labelling", "medical", "german"])
-trainer.save_model(constants.SEQ_LABELLING_MODEL_PATH + datetime.now().strftime("%Y%m%d-%H%M%S") + "/")
+   # trainer.create_model_card(language="de", tasks="token-classification", model_name="inselbert-sequence-labeller", tags=["seq_labelling", "medical", "german"])
+    trainer.save_model(constants.SEQ_LABELLING_MODEL_PATH + datetime.now().strftime("%Y%m%d-%H%M%S") + "_CV" + str(index) + "/")
 wandb_helper.finish()
