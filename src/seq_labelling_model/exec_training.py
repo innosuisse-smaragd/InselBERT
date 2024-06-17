@@ -30,6 +30,7 @@ config = {
 
 wandb_helper = WandbHelper(constants.SEQ_LABELLING_MODEL_NAME, config)
 schema = SchemaGenerator()  # TODO: Impact of sharing modifiers (current implementation)
+# By setting modeltype, either the base model or the further pre-trained model is loaded
 model_helper = ModelHelper(AutoModelForTokenClassification, schema, constants.SEQ_LABELLING_MODEL_NAME, len(schema.label2id_combined))
 
 
@@ -103,8 +104,10 @@ def compute_metrics(eval_preds):
 
 
 for index, tokenized_hf_ds in enumerate(tokenized_dataset_dicts):
+    output_path = constants.SEQ_LABELLING_MODEL_PATH + datetime.now().strftime("%Y%m%d-%H%M%S") + "_CV" + str(index) + "/"
+
     training_args = TrainingArguments(
-        output_dir=constants.SEQ_LABELLING_MODEL_PATH + datetime.now().strftime("%Y%m%d-%H%M%S") + "_CV" + str(index) + "/",
+        output_dir= output_path,
         learning_rate=LEARNING_RATE,
         per_device_train_batch_size=BATCH_SIZE,
         per_device_eval_batch_size=BATCH_SIZE,
@@ -133,5 +136,5 @@ for index, tokenized_hf_ds in enumerate(tokenized_dataset_dicts):
     trainer.save_metrics(split="validation", metrics=validation_results.metrics, combined=False)
 
    # trainer.create_model_card(language="de", tasks="token-classification", model_name="inselbert-sequence-labeller", tags=["seq_labelling", "medical", "german"])
-    trainer.save_model(constants.SEQ_LABELLING_MODEL_PATH + datetime.now().strftime("%Y%m%d-%H%M%S") + "_CV" + str(index) + "/")
+    trainer.save_model(output_path)
 wandb_helper.finish()
