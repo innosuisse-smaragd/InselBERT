@@ -1,5 +1,8 @@
 REPORTS_CSV_FILE_PATH = "./data/protected/radiology-reports.csv"
 REPORTS_CSV_FILE_COLUMN_NAME = "text"
+MAMMO_REPORTS_CSV_FILE_PATH = "./data/protected/mammo-reports.csv"
+# ALL or MAMMOGRAPHY
+CORPUS_TYPE = "MAMMOGRAPHY"
 ANNOTATED_REPORTS_PATH = "./data/protected/annotated-reports"
 FACT_SCHEMA_PATH = "./data/test/fact_schema_v41.html"
 QA_DATA_OUTPUT_PATH = "./data/protected/qa_json"

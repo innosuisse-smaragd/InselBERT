@@ -1,4 +1,5 @@
 # Based on https://colab.research.google.com/github/huggingface/notebooks/blob/main/examples/language_modeling.ipynb#scrollTo=DVHs5aCA3l-_
+from datetime import datetime
 
 from transformers import AutoTokenizer
 from transformers import (
@@ -15,13 +16,20 @@ import shared.corpus_loader as loader
 def further_pretrain_model():
     print("Loading corpus")
     corpus_loader = loader.CorpusLoader()
-
+    CORPUS_TYPE = constants.CORPUS_TYPE
     NUM_PROC = 4
     BATCHED = True
     # block_size = tokenizer.model_max_length
     # BLOCK_SIZE = 128
+    reports = []
 
-    reports = corpus_loader.load_corpus()
+    if CORPUS_TYPE == "MAMMOGRAPHY":
+        reports = corpus_loader.load_mammography_corpus()
+    elif CORPUS_TYPE == "ALL":
+        reports = corpus_loader.load_corpus()
+    else:
+        raise ValueError(f"Unknown corpus type: {CORPUS_TYPE}")
+
     csv_dataset = corpus_loader.convert_corpus_to_dataset_text(reports)
 
     datasets = csv_dataset.train_test_split(
@@ -80,8 +88,9 @@ def further_pretrain_model():
     # model = AutoModelForMaskedLM.from_pretrained(constants.BASE_MODEL_PATH)
     model = AutoModelForMaskedLM.from_pretrained(constants.BASE_MODEL_NAME)
 
+    output_path = constants.PRETRAINED_MODEL_PATH + datetime.now().strftime("%Y%m%d-%H%M%S") + CORPUS_TYPE + "/"
     training_args = TrainingArguments(
-        constants.PRETRAINED_MODEL_PATH,
+        output_path,
         evaluation_strategy="epoch",
         learning_rate=2e-5,
         weight_decay=0.01,
@@ -104,3 +113,8 @@ def further_pretrain_model():
 
     eval_results = trainer.evaluate()
     print(f"Perplexity: {eval_results['eval_loss']}")
+    trainer.save_metrics("test", eval_results)
+
+
+if __name__ == "__main__":
+    further_pretrain_model()
