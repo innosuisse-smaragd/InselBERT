@@ -6,36 +6,46 @@
 - cd into project root
 - run `pdm install`
 - A venv should be created in the project root and activated automatically. If not, [activate it manually](https://pdm-project.org/latest/usage/venv/#activate-a-virtualenv).
+- To pre-train the model on encrypted data, run 'export DECRYTPION_KEY=<key>' in the terminal.
 
 ## Available scripts
 
 In the file `pyproject.toml`, several scripts are defined that can be run via `pdm <script-name>`. Do not run scripts directly using `python <script-name>` to avoid issues.
 
-## Description of serialized models (contained in `./serialized_models`)
+## Description of resulting models
 
-### medbert_512
+### inselbert
 
-This model serves as the basis for further development. The folder contains the git-repo of the model itself. More information .
+This folder contains the further-pretrained model variants based on [MedBERT.de](https://huggingface.co/GerMedBERT/medbert-512).
+The "ALL"-models are further-pretrained on the whole pretraining corpus. 
+The "MAMMO"-models are further-pretrained on the mammography subset of the pretraining corpus for 3 and for 10 epochs.
 
-### medbert_512_pretrained
-
-This folder contains the result of the further-pretraining of [MedBERT.de](https://huggingface.co/GerMedBERT/medbert-512) on the Insel corpus based on Masked Language Modelling (MLM).
-
-### inselBERT_extraction_finetuned
-
-This folder contains the fine-tuned model which is composed of the medbert_512_pretrained encoder body and two classification heads (one single-label, one multi-label). The heads predict for each token to which facts (0..n) it might belong and whether the token corresponds to an anchor entity, respectively. This architecture corresponds to the method proposed by Steinkamp et al. Once trained, this model takes a clinical text as input and returns annotations for each token (facts and anchors).
-
-### inselBERT_extraction_finetuned_refined
-
-This folder contains the second, fine-tuned model which is composed of the same medbert_512_pretrained encoder body of medbert_512_facts. Additionally, three classification heads are added. Two binary classification heads predict whether a token is the beginning or end of a fact span, respectively. A third, multi-class classification head predicts which modifier (0..1) a token is part of. Once trained, this model takes a fact candidate, which corresponds to the validated output of the former model, X tokens before and after the fact candidate as well as the information which fact was identified (see open issues).
+#### Training
+- In constants.py, set the pretraining strategy to "ALL" or "MAMMO" to choose the desired model variant.
+- If needed, adapt epoch number in the training file.
+- Run `pdm further-pretrain`
 
 ### inselbert_qa_hf
 
-This folder contains the model for extractive question answering trained with the example script provided by HuggingFace.
+This folder contains the models fine-tuned for extractive question answering trained with the example script provided by HuggingFace.
 The model must be trained in a separate repository, as source installation of the transformers library is required. 
-First, generate training data running `pdm generate-dataset-json-for-qa-model`. Copy the folder "./data/protected/qa_json" into the other repository and train the model. 
-Copy the resulting model files into ./serialized_models/inselbert_qa_hf and run `pdm save-qa-model-to-bento` to create a BentoService for the model.
-The model takes a question and a clinical text as input and returns the answer span to the question.
+The final model takes a question and a clinical text as input and returns the answer span to the question.
+
+#### Training
+- Clone and set-up [this transformers repo](https://github.com/huggingface/transformers/blob/main/examples/pytorch/question-answering/README.md) provided by HuggingFace.
+- Copy the further-pretrained model variants from the inselbert folder into the transformers repo.
+- Here, generate training data by running `pdm generate-dataset-json-for-qa-model`. 
+- Copy the folder "./data/protected/qa_json" into the other repository and train the models.
+- Copy the resulting model files back into ./serialized_models/inselbert_qa_hf and run `pdm save-qa-model-to-bento` to create a BentoService for the model.
+
+
+### inselbert_seq_labelling
+
+This folder contains the model variants fine-tuned for sequence labelling, each with k-fold cross-validation.
+The model takes a clinical text as input and returns annotated tokens with the corresponding labels.
+
+#### Training
+- Run `pdm finetune-sequence-labelling-model` to fine-tune the model on the training data.
 
 ## Deployment
 
@@ -56,32 +66,24 @@ To generate a docker image, follow these steps:
    - External: Run `streamlit run streamlit_app.py` to start the app locally
    - External: Build a docker image with `docker build -t inselbertExtractor .` and run it with `docker run -p 8501:8501 inselbertExtractor` 
 
-### Evaluation
+## Evaluation
 
-#### Comparison between inselBERT and MedBERT.de
+#### Evaluation of pre-trained models 
 
-   Metric: McNemar test.
+- Metric: model perplexity
+    - Adapt model paths in src/further_pretraining/evaluation/exec_evaluation.py 
+    - Run `pdm evaluate-pretrained-models` to evaluate the pre-trained models on the evaluation data set (10 % of data).
 
-1) Fine-tune two models each for question answering and sequence labelling
-2) 
-
-#### (Cross-validation of question answering model)
-
-#### Cross-validation of sequence labelling model
-
-- Train k models by generating folds of training data
-- Evaluate all models on the same validation data using HF evaluation
 #### Evaluation of question answering model
-- Metric: squad_v2 (including no_answer metric)
-   - Bootstrap of validation data set 
-   - run ... 
+- Metric: squad_v2 (including no_answer metric), with bootstrap of validation dataset
+    - Make sure to have a trained model in the serialized_models folder and the constants.py file set to the correct model variants
+    - run `pdm evaluate-qa-model` to evaluate the question answering model
 
 #### Evaluation of sequence labelling model
 - Metric: seqeval
-   - Make sure to have a trained model in the serialized_models folder
-   - Bootstrap of validation data set
-   - run `pdm evaluate-seq-model` to evaluate the sequence labelling model
-Output: 
+    - Evaluation data is created during model training due to k-fold cross-validation
+    - Analyse the generated evaluation files by running the file `src/sequence_labelling_model/analyze_cross_validation.py`
+    - If needed, adapt model paths directly in the file
 
 ## Open issues
 

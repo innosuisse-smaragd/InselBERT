@@ -94,6 +94,7 @@ def further_pretrain_model():
         evaluation_strategy="epoch",
         learning_rate=2e-5,
         weight_decay=0.01,
+        # num_train_epochs=10,
     )
 
     data_collator = DataCollatorForLanguageModeling(
@@ -114,7 +115,7 @@ def further_pretrain_model():
     eval_results = trainer.evaluate()
     print(f"Perplexity: {eval_results['eval_loss']}")
     trainer.save_metrics("test", eval_results)
-
+    trainer.save_model(output_path)
 
 if __name__ == "__main__":
     further_pretrain_model()

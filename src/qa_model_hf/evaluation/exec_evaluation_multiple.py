@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pandas as pd
 from evaluate import evaluator
 
@@ -16,29 +18,32 @@ dataset_qa_train_test_valid = DatasetHelper.create_data_splits_qa(train_dictlist
 validation_set = dataset_qa_train_test_valid["validation"]
 
 models = [
-    "./serialized_models/inselbert_qa_hf/inselbert_qa_hf_240319",
-    "./serialized_models/inselbert_qa_hf/medbert_de_qa_hf_240319",
+    constants.INSELBERT_MULTI_QA_PATH,
+    constants.MEDBERT_DE_QA_PATH,
+    constants.INSELBERT_MAMMO_QA_PATH_03,
+    constants.INSELBERT_MAMMO_QA_PATH_10
 ]
 
 task_evaluator = evaluator("question-answering")
 
 results = []
+# 599 is based on Wilcox, R. R. (2010). Fundamentals of modern statistical methods: Substantially improving power and accuracy. Springer.
 for model in models:
     results.append(
         task_evaluator.compute(
-            model_or_pipeline=model, data=validation_set, metric="squad_v2", squad_v2_format = True
+            model_or_pipeline=model, data=validation_set, metric="squad_v2", squad_v2_format = True, strategy="bootstrap",
+            n_resamples=599 # final: 599
             )
         )
 
 df = pd.DataFrame(results, index=models)
+df.to_csv(constants.EVAL_OUTPUT_PATH + datetime.now().strftime("%Y%m%d-%H%M%S") + "evaluation_results_qa.csv")
 
 df = df[["exact", "f1", "total", "HasAns_exact", "HasAns_f1", "HasAns_total","best_exact", "best_exact_thresh","best_f1", "best_f1_thresh","total_time_in_seconds", "samples_per_second", "latency_in_seconds"]]
 df.to_csv(constants.QA_HF_MODEL_PATH + "evaluation_results/" + "results.csv")
 
 
 df.drop(columns=["total", "HasAns_total", "best_exact_thresh", "best_f1_thresh","total_time_in_seconds", "samples_per_second", "latency_in_seconds"], inplace=True)
-
-
 
 models = df.index
 metrics = df.columns

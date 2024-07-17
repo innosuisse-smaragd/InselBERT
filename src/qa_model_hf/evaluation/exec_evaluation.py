@@ -21,7 +21,7 @@ dataset = DatasetDict(
 task_evaluator = evaluator("question-answering")
 
 eval_results = task_evaluator.compute(
-    model_or_pipeline=constants.QA_HF_MODEL_PATH,
+    model_or_pipeline="./serialized_models/inselbert_qa_hf/medbert_de_qa_hf_240319",
     data=dataset["validation"],
     metric="squad_v2",
     squad_v2_format=True,
@@ -30,4 +30,5 @@ eval_results = task_evaluator.compute(
 )
 
 print(eval_results)
+
 data = eval_results

@@ -1,6 +1,7 @@
 # https://huggingface.co/docs/evaluate/base_evaluator#token-classification
 import pandas as pd
-from datasets import load_dataset, Dataset
+import torch
+from datasets import load_dataset, Dataset, ClassLabel, Sequence, Features, Value
 from evaluate import evaluator
 from transformers import AutoModelForTokenClassification
 
@@ -12,21 +13,43 @@ from shared.schema_generator import SchemaGenerator
 import plotly.graph_objs as go
 
 
-schema = SchemaGenerator()
+BATCH_SIZE = 16
+LEARNING_RATE = 5e-5
+WEIGHT_DECAY = 1e-2
+NUM_EPOCHS = 100
+
+config = {
+    "batch_size": BATCH_SIZE,
+    "learning_rate": LEARNING_RATE,
+    "weight_decay": WEIGHT_DECAY,
+    "epochs": NUM_EPOCHS
+}
+
+schema = SchemaGenerator()  # TODO: Impact of sharing modifiers (current implementation)
 model_helper = ModelHelper(AutoModelForTokenClassification, schema, constants.SEQ_LABELLING_MODEL_NAME, len(schema.label2id_combined))
 
-
 loader = CASLoader(constants.ANNOTATED_REPORTS_PATH, schema)
-extracted_facts_with_combined_tags = loader.load_CAS_convert_to_combined_tag_list_seq_labelling(encode=False)
+extracted_facts_with_combined_tags = loader.load_CAS_convert_to_combined_tag_list_seq_labelling()
 dictlist = []
 
 for entry in extracted_facts_with_combined_tags:
     dictlist.append(entry[1])
 
 
+dataset = Dataset.from_list(
+    mapping=dictlist,
+    features=Features({
+    "tokens":Sequence(feature=Value(dtype='string')),
+    "tags":Sequence(feature=ClassLabel(names=list(schema.id2label_combined.values()))),
+}),
+)
 
-dataset = Dataset.from_list(dictlist)
-dataset_helper = DatasetHelper(dataset, tokenizer=model_helper.tokenizer)
+dataset_helper = DatasetHelper(dataset, batch_size=BATCH_SIZE, tokenizer=model_helper.tokenizer)
+torch.manual_seed(0)
+
+print("Dataset: ", dataset_helper.dataset)
+print("First entry: ", dataset_helper.dataset["validation"][0])
+print("Features of validation split: ", dataset_helper.dataset["validation"].features)
 
 task_evaluator = evaluator("token-classification")
 
@@ -35,8 +58,8 @@ eval_results = task_evaluator.compute(
     data=dataset_helper.dataset["validation"],
     metric="seqeval",
     label_column="tags",
-    #strategy="bootstrap",
-    #n_resamples=30,
+    strategy="bootstrap",
+    n_resamples=10,
 )
 
 

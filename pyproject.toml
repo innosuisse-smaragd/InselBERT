@@ -48,5 +48,6 @@ build-bento = {cmd = "bentoml build ./src/"}
 run-bento = {cmd = "bentoml serve inselbertfactextractor:latest"}
 containerize-bento = {cmd = "bentoml containerize --opt platform=linux/amd64 inselbertfactextractor:latest"}
 
-
+evaluate-qa-model = "python src/qa_model_hf/evaluation/exec_evaluation_multiple.py"
+evaluate-pretrained-models = "python src/further_pre_training/evaluation/exec_evaluation.py"
 

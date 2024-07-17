@@ -15,12 +15,20 @@ QA_MODEL_NAME = "inselbert_qa"
 QA_HF_MODEL_NAME = "inselbert_qa_hf"
 SEQ_LABELLING_MODEL_NAME = "inselbert_seq_labelling"
 
-PRETRAINED_MODEL_PATH = "./serialized_models/inselbert/"
+
+PRETRAINED_MODEL_PATH = "./serialized_models/inselbert/20240620-112101MAMMOGRAPHY_10/"
 F_A_EXTRACTION_MODEL_PATH = "./serialized_models/" + F_A_EXTRACTION_MODEL_NAME + "/"
 M_EXTRACTION_MODEL_PATH = "./serialized_models/" + M_EXTRACTION_MODEL_NAME + "/"
 QA_MODEL_PATH = "./serialized_models/" + QA_MODEL_NAME + "/"
 QA_HF_MODEL_PATH = "./serialized_models/" + QA_HF_MODEL_NAME + "/"
 SEQ_LABELLING_MODEL_PATH = "./serialized_models/" + SEQ_LABELLING_MODEL_NAME + "/"
+
+MEDBERT_DE_QA_PATH = "./serialized_models/" + QA_MODEL_NAME + "/medbert_de_qa_hf_240620/"
+INSELBERT_MULTI_QA_PATH = "./serialized_models/" + QA_MODEL_NAME + "/inselbert_qa_hf_all_240620/"
+INSELBERT_MAMMO_QA_PATH_03 = "./serialized_models/" + QA_MODEL_NAME + "/inselbert_qa_hf_mammo_03_240620/"
+INSELBERT_MAMMO_QA_PATH_10 = "./serialized_models/" + QA_MODEL_NAME + "/inselbert_qa_hf_mammo_10_240620/"
+
+EVAL_OUTPUT_PATH = "./data/output/evaluation_results/"
 
 TOKENIZER_ABBREVIATIONS_FILE = "./data/ID-abbreviation-list.txt"
 
