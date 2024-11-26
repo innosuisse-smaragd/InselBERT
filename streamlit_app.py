@@ -49,8 +49,8 @@ st.set_page_config(
 )
 
 st.title(":gem: Smaragd QA-based fact extraction")
-model_checkpoint_qa = "./serialized_models/inselbert_qa_hf/"
-model_checkpoint_seq_labelling = "./serialized_models/inselbert_seq_labelling/"
+model_checkpoint_qa = "./serialized_models/inselbert_qa/inselbert_qa_hf_all_240620/"
+model_checkpoint_seq_labelling = "./serialized_models/inselbert_seq_labelling/20240624-115000_inselbert_all/20240624-110554_CV0"
 question_answerer = pipeline("question-answering", model=model_checkpoint_qa, handle_impossible_answer=True)
 sequence_labeller = pipeline("ner", model=model_checkpoint_seq_labelling)
 
