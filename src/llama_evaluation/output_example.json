@@ -1,0 +1,42 @@
+{
+  "extracted_facts": [
+    {
+      "fact_class": "Bildgebendes Verfahren durchgeführt",
+      "entities": [
+        {
+          "Modalität": ""
+        },
+        {
+          "Körperteil/Organ": ""
+        },
+        {
+          "Projektionsebene": ""
+        },
+        {
+          "Negation": ""
+        },
+        {
+          "Unsicherheit": ""
+        },
+        {
+          "Zeit / Datum": ""
+        },
+        {
+          "Lateralität": ""
+        },
+        {
+          "Lokalisierung": ""
+        },
+        {
+          "Dynamik": ""
+        },
+        {
+          "Zustand": ""
+        },
+        {
+          "Grösse": ""
+        }
+      ]
+    }
+  ]
+}

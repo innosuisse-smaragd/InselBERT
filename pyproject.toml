@@ -16,6 +16,8 @@ dependencies = [
     "matplotlib>=3.7.2",
     "evaluate>=0.4.1",
     "streamlit>=1.30.0",
+    "ollama>=0.3.3",
+    "pydantic>=2.10.0",
 ]
 requires-python = ">=3.11"
 
