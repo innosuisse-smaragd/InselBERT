@@ -1,7 +1,8 @@
 {
-  "extracted_facts": [
+  "fact_class": "Bildgebendes Verfahren durchgeführt",
+  "extracted_fact_instances": [
     {
-      "fact_class": "Bildgebendes Verfahren durchgeführt",
+      "fact_text": "",
       "entities": [
         {
           "Modalität": ""
